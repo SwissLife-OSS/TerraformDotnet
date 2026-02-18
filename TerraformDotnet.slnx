@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TerraformDotnet.Hcl/TerraformDotnet.Hcl.csproj" />
+    <Project Path="src/TerraformDotnet/TerraformDotnet.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/TerraformDotnet.Hcl.Benchmarks/TerraformDotnet.Hcl.Benchmarks.csproj" />
+    <Project Path="test/TerraformDotnet.Hcl.Tests/TerraformDotnet.Hcl.Tests.csproj" />
+    <Project Path="test/TerraformDotnet.Tests/TerraformDotnet.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,165 @@
+#nullable enable
+abstract TerraformDotnet.Types.TerraformType.Equals(TerraformDotnet.Types.TerraformType? other) -> bool
+abstract TerraformDotnet.Types.TerraformType.Kind.get -> TerraformDotnet.Types.TerraformTypeKind
+abstract TerraformDotnet.Types.TerraformType.ToHcl() -> string!
+override abstract TerraformDotnet.Types.TerraformType.GetHashCode() -> int
+override TerraformDotnet.Types.TerraformCollectionType.Equals(TerraformDotnet.Types.TerraformType? other) -> bool
+override TerraformDotnet.Types.TerraformCollectionType.GetHashCode() -> int
+override TerraformDotnet.Types.TerraformCollectionType.Kind.get -> TerraformDotnet.Types.TerraformTypeKind
+override TerraformDotnet.Types.TerraformCollectionType.ToHcl() -> string!
+override TerraformDotnet.Types.TerraformObjectField.Equals(object? obj) -> bool
+override TerraformDotnet.Types.TerraformObjectField.GetHashCode() -> int
+override TerraformDotnet.Types.TerraformObjectType.Equals(TerraformDotnet.Types.TerraformType? other) -> bool
+override TerraformDotnet.Types.TerraformObjectType.GetHashCode() -> int
+override TerraformDotnet.Types.TerraformObjectType.Kind.get -> TerraformDotnet.Types.TerraformTypeKind
+override TerraformDotnet.Types.TerraformObjectType.ToHcl() -> string!
+override TerraformDotnet.Types.TerraformTupleType.Equals(TerraformDotnet.Types.TerraformType? other) -> bool
+override TerraformDotnet.Types.TerraformTupleType.GetHashCode() -> int
+override TerraformDotnet.Types.TerraformTupleType.Kind.get -> TerraformDotnet.Types.TerraformTypeKind
+override TerraformDotnet.Types.TerraformTupleType.ToHcl() -> string!
+override TerraformDotnet.Types.TerraformType.Equals(object? obj) -> bool
+override TerraformDotnet.Types.TerraformType.ToString() -> string!
+static TerraformDotnet.Emit.InputValue.implicit operator TerraformDotnet.Emit.InputValue!(string! expression) -> TerraformDotnet.Emit.InputValue!
+static TerraformDotnet.Module.TerraformModule.LoadFromContent(System.ReadOnlySpan<byte> hclContent) -> TerraformDotnet.Module.TerraformModule!
+static TerraformDotnet.Module.TerraformModule.LoadFromContents(System.Collections.Generic.IEnumerable<byte[]!>! fileContents) -> TerraformDotnet.Module.TerraformModule!
+static TerraformDotnet.Module.TerraformModule.LoadFromDirectory(string! directoryPath) -> TerraformDotnet.Module.TerraformModule!
+static TerraformDotnet.Module.TerraformModule.LoadFromFiles(System.Collections.Generic.IEnumerable<TerraformDotnet.Hcl.Nodes.HclFile!>! files) -> TerraformDotnet.Module.TerraformModule!
+static TerraformDotnet.Types.TerraformType.Any.get -> TerraformDotnet.Types.TerraformType!
+static TerraformDotnet.Types.TerraformType.Bool.get -> TerraformDotnet.Types.TerraformType!
+static TerraformDotnet.Types.TerraformType.List(TerraformDotnet.Types.TerraformType! element) -> TerraformDotnet.Types.TerraformCollectionType!
+static TerraformDotnet.Types.TerraformType.Map(TerraformDotnet.Types.TerraformType! element) -> TerraformDotnet.Types.TerraformCollectionType!
+static TerraformDotnet.Types.TerraformType.Number.get -> TerraformDotnet.Types.TerraformType!
+static TerraformDotnet.Types.TerraformType.Object(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Types.TerraformObjectField!>! fields) -> TerraformDotnet.Types.TerraformObjectType!
+static TerraformDotnet.Types.TerraformType.Parse(TerraformDotnet.Hcl.Nodes.HclExpression! expression) -> TerraformDotnet.Types.TerraformType!
+static TerraformDotnet.Types.TerraformType.Set(TerraformDotnet.Types.TerraformType! element) -> TerraformDotnet.Types.TerraformCollectionType!
+static TerraformDotnet.Types.TerraformType.String.get -> TerraformDotnet.Types.TerraformType!
+static TerraformDotnet.Types.TerraformType.Tuple(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Types.TerraformType!>! elements) -> TerraformDotnet.Types.TerraformTupleType!
+TerraformDotnet.Emit.FileEmitterOptions
+TerraformDotnet.Emit.FileEmitterOptions.FileEmitterOptions() -> void
+TerraformDotnet.Emit.FileEmitterOptions.InputFiles.get -> System.Collections.Generic.IDictionary<string!, System.Collections.Generic.IDictionary<string!, TerraformDotnet.Emit.InputValue!>!>?
+TerraformDotnet.Emit.FileEmitterOptions.InputFiles.init -> void
+TerraformDotnet.Emit.FileEmitterOptions.ModuleFileName.get -> string?
+TerraformDotnet.Emit.FileEmitterOptions.ModuleFileName.init -> void
+TerraformDotnet.Emit.FileEmitterOptions.VariablesFileName.get -> string?
+TerraformDotnet.Emit.FileEmitterOptions.VariablesFileName.init -> void
+TerraformDotnet.Emit.InputValue
+TerraformDotnet.Emit.InputValue.Comment.get -> string?
+TerraformDotnet.Emit.InputValue.Expression.get -> string!
+TerraformDotnet.Emit.InputValue.InputValue(string! expression, string? comment = null) -> void
+TerraformDotnet.Emit.ModuleCall
+TerraformDotnet.Emit.ModuleCall.Arguments.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+TerraformDotnet.Emit.ModuleCall.Count.get -> string?
+TerraformDotnet.Emit.ModuleCall.DependsOn.get -> System.Collections.Generic.IReadOnlyList<string!>?
+TerraformDotnet.Emit.ModuleCall.ForEach.get -> string?
+TerraformDotnet.Emit.ModuleCall.Name.get -> string!
+TerraformDotnet.Emit.ModuleCall.Providers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>?
+TerraformDotnet.Emit.ModuleCall.Source.get -> string!
+TerraformDotnet.Emit.ModuleCall.SourceModule.get -> TerraformDotnet.Module.TerraformModule?
+TerraformDotnet.Emit.ModuleCall.Version.get -> string?
+TerraformDotnet.Emit.ModuleCallBuilder
+TerraformDotnet.Emit.ModuleCallBuilder.Build() -> TerraformDotnet.Emit.ModuleCall!
+TerraformDotnet.Emit.ModuleCallBuilder.Count(string! hclExpression) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.DependsOn(params string![]! dependencies) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.FillRequired(System.Func<string!, string!>! expressionFactory) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.ForEach(string! hclExpression) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.IncludeOptionalComments(bool include) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.ModuleCallBuilder(string! moduleName) -> void
+TerraformDotnet.Emit.ModuleCallBuilder.ModuleCallBuilder(string! moduleName, TerraformDotnet.Module.TerraformModule! module) -> void
+TerraformDotnet.Emit.ModuleCallBuilder.Providers(System.Collections.Generic.IDictionary<string!, string!>! providerMap) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.Set(string! name, string! hclExpression) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.SetLiteral(string! name, bool value) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.SetLiteral(string! name, int value) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.SetLiteral(string! name, string! value) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.Source(string! source) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.Version(string! version) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallEmitter
+TerraformDotnet.Emit.ModuleCallEmitter.EmitInputValues(System.Collections.Generic.IDictionary<string!, TerraformDotnet.Emit.InputValue!>! values, bool includeQualifierComments = true) -> string!
+TerraformDotnet.Emit.ModuleCallEmitter.EmitModuleBlock() -> string!
+TerraformDotnet.Emit.ModuleCallEmitter.EmitVariableDeclarations(TerraformDotnet.Emit.VariableDeclarationOptions? options = null) -> string!
+TerraformDotnet.Emit.ModuleCallEmitter.ModuleCallEmitter(TerraformDotnet.Emit.ModuleCall! call) -> void
+TerraformDotnet.Emit.ModuleCallEmitter.WriteTo(string! directoryPath, TerraformDotnet.Emit.FileEmitterOptions! options) -> void
+TerraformDotnet.Emit.VariableDeclarationOptions
+TerraformDotnet.Emit.VariableDeclarationOptions.ExcludeVariables.get -> System.Collections.Generic.ISet<string!>!
+TerraformDotnet.Emit.VariableDeclarationOptions.ExcludeVariables.init -> void
+TerraformDotnet.Emit.VariableDeclarationOptions.IncludeDefault.get -> bool
+TerraformDotnet.Emit.VariableDeclarationOptions.IncludeDefault.init -> void
+TerraformDotnet.Emit.VariableDeclarationOptions.IncludeDescription.get -> bool
+TerraformDotnet.Emit.VariableDeclarationOptions.IncludeDescription.init -> void
+TerraformDotnet.Emit.VariableDeclarationOptions.IncludeType.get -> bool
+TerraformDotnet.Emit.VariableDeclarationOptions.IncludeType.init -> void
+TerraformDotnet.Emit.VariableDeclarationOptions.VariableDeclarationOptions() -> void
+TerraformDotnet.Module.TerraformDataSource
+TerraformDotnet.Module.TerraformDataSource.Body.get -> TerraformDotnet.Hcl.Nodes.HclBody!
+TerraformDotnet.Module.TerraformDataSource.Count.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformDataSource.ForEach.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformDataSource.Name.get -> string!
+TerraformDotnet.Module.TerraformDataSource.Type.get -> string!
+TerraformDotnet.Module.TerraformLocal
+TerraformDotnet.Module.TerraformLocal.Name.get -> string!
+TerraformDotnet.Module.TerraformLocal.Value.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Module.TerraformModule
+TerraformDotnet.Module.TerraformModule.DataSources.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformDataSource!>!
+TerraformDotnet.Module.TerraformModule.Locals.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformLocal!>!
+TerraformDotnet.Module.TerraformModule.OptionalVariables.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
+TerraformDotnet.Module.TerraformModule.Outputs.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformOutput!>!
+TerraformDotnet.Module.TerraformModule.ProviderRequirements.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformProviderRequirement!>!
+TerraformDotnet.Module.TerraformModule.RequiredTerraformVersion.get -> string?
+TerraformDotnet.Module.TerraformModule.RequiredVariables.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
+TerraformDotnet.Module.TerraformModule.Resources.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformResource!>!
+TerraformDotnet.Module.TerraformModule.Variables.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
+TerraformDotnet.Module.TerraformOutput
+TerraformDotnet.Module.TerraformOutput.DependsOn.get -> System.Collections.Generic.IReadOnlyList<string!>?
+TerraformDotnet.Module.TerraformOutput.Description.get -> string?
+TerraformDotnet.Module.TerraformOutput.IsSensitive.get -> bool
+TerraformDotnet.Module.TerraformOutput.Name.get -> string!
+TerraformDotnet.Module.TerraformOutput.Value.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Module.TerraformProviderRequirement
+TerraformDotnet.Module.TerraformProviderRequirement.Name.get -> string!
+TerraformDotnet.Module.TerraformProviderRequirement.Source.get -> string?
+TerraformDotnet.Module.TerraformProviderRequirement.Version.get -> string?
+TerraformDotnet.Module.TerraformResource
+TerraformDotnet.Module.TerraformResource.Body.get -> TerraformDotnet.Hcl.Nodes.HclBody!
+TerraformDotnet.Module.TerraformResource.Count.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformResource.DependsOn.get -> System.Collections.Generic.IReadOnlyList<string!>?
+TerraformDotnet.Module.TerraformResource.ForEach.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformResource.Name.get -> string!
+TerraformDotnet.Module.TerraformResource.Provider.get -> string?
+TerraformDotnet.Module.TerraformResource.Type.get -> string!
+TerraformDotnet.Module.TerraformValidation
+TerraformDotnet.Module.TerraformValidation.Condition.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Module.TerraformValidation.ErrorMessage.get -> string!
+TerraformDotnet.Module.TerraformVariable
+TerraformDotnet.Module.TerraformVariable.Default.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformVariable.Description.get -> string?
+TerraformDotnet.Module.TerraformVariable.IsNullable.get -> bool
+TerraformDotnet.Module.TerraformVariable.IsOptional.get -> bool
+TerraformDotnet.Module.TerraformVariable.IsRequired.get -> bool
+TerraformDotnet.Module.TerraformVariable.IsSensitive.get -> bool
+TerraformDotnet.Module.TerraformVariable.Name.get -> string!
+TerraformDotnet.Module.TerraformVariable.Type.get -> TerraformDotnet.Types.TerraformType?
+TerraformDotnet.Module.TerraformVariable.Validation.get -> TerraformDotnet.Module.TerraformValidation?
+TerraformDotnet.Types.TerraformCollectionType
+TerraformDotnet.Types.TerraformCollectionType.Element.get -> TerraformDotnet.Types.TerraformType!
+TerraformDotnet.Types.TerraformObjectField
+TerraformDotnet.Types.TerraformObjectField.Default.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Types.TerraformObjectField.Equals(TerraformDotnet.Types.TerraformObjectField? other) -> bool
+TerraformDotnet.Types.TerraformObjectField.IsOptional.get -> bool
+TerraformDotnet.Types.TerraformObjectField.Name.get -> string!
+TerraformDotnet.Types.TerraformObjectField.TerraformObjectField(string! name, TerraformDotnet.Types.TerraformType! type, bool isOptional = false, TerraformDotnet.Hcl.Nodes.HclExpression? defaultValue = null) -> void
+TerraformDotnet.Types.TerraformObjectField.Type.get -> TerraformDotnet.Types.TerraformType!
+TerraformDotnet.Types.TerraformObjectType
+TerraformDotnet.Types.TerraformObjectType.Fields.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Types.TerraformObjectField!>!
+TerraformDotnet.Types.TerraformTupleType
+TerraformDotnet.Types.TerraformTupleType.Elements.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Types.TerraformType!>!
+TerraformDotnet.Types.TerraformType
+TerraformDotnet.Types.TerraformType.TerraformType() -> void
+TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.Any = 3 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.Bool = 2 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.List = 4 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.Map = 6 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.Number = 1 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.Object = 7 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.Set = 5 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.String = 0 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Types.TerraformTypeKind.Tuple = 8 -> TerraformDotnet.Types.TerraformTypeKind
