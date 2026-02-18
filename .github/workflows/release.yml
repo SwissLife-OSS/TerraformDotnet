@@ -18,7 +18,7 @@ jobs:
 
       - name: Build projects
         shell: bash
-        run: dotnet build ./all.csproj -c Release
+        run: dotnet build ./all.csproj -c Release -graph:true
 
       - name: Extract version
         id: extract_version

@@ -28,7 +28,7 @@ jobs:
 
       - name: Build projects
         shell: bash
-        run: dotnet build ./all.csproj -f net${{ matrix.dotnet-version }}.0
+        run: dotnet build ./all.csproj -f net${{ matrix.dotnet-version }}.0 -graph:true
 
       - name: Check for breaking API changes
         shell: bash
