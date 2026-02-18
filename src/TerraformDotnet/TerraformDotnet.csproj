@@ -19,8 +19,7 @@
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <!-- CS1591: missing XML doc; RS0016/RS0017: public API tracking -->
-    <NoWarn>$(NoWarn);CS1591;RS0016;RS0017;RS0027</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;RS0026;RS0027</NoWarn>
   </PropertyGroup>
 
   <!-- Expose internals to test project -->

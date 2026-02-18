@@ -1,1 +1,472 @@
 #nullable enable
+abstract TerraformDotnet.Hcl.Nodes.HclNode.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+abstract TerraformDotnet.Hcl.Nodes.HclNode.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+abstract TerraformDotnet.Hcl.Nodes.HclNode.NodeType.get -> TerraformDotnet.Hcl.Nodes.HclNodeType
+override TerraformDotnet.Hcl.Common.Mark.Equals(object? obj) -> bool
+override TerraformDotnet.Hcl.Common.Mark.GetHashCode() -> int
+override TerraformDotnet.Hcl.Common.Mark.ToString() -> string!
+override TerraformDotnet.Hcl.Evaluation.HclValue.Equals(object? obj) -> bool
+override TerraformDotnet.Hcl.Evaluation.HclValue.GetHashCode() -> int
+override TerraformDotnet.Hcl.Evaluation.HclValue.ToString() -> string!
+override TerraformDotnet.Hcl.Nodes.HclAttribute.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclAttribute.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclAttribute.NodeType.get -> TerraformDotnet.Hcl.Nodes.HclNodeType
+override TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclBinaryExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclBinaryExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclBlock.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclBlock.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclBlock.NodeType.get -> TerraformDotnet.Hcl.Nodes.HclNodeType
+override TerraformDotnet.Hcl.Nodes.HclBody.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclBody.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclBody.NodeType.get -> TerraformDotnet.Hcl.Nodes.HclNodeType
+override TerraformDotnet.Hcl.Nodes.HclConditionalExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclConditionalExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclExpression.NodeType.get -> TerraformDotnet.Hcl.Nodes.HclNodeType
+override TerraformDotnet.Hcl.Nodes.HclFile.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclFile.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclFile.NodeType.get -> TerraformDotnet.Hcl.Nodes.HclNodeType
+override TerraformDotnet.Hcl.Nodes.HclForExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclForExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclIndexExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclIndexExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclLiteralExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclObjectExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclObjectExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclSplatExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclSplatExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclTemplateExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclTemplateExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclTemplateWrapExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclTemplateWrapExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclTupleExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclTupleExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclUnaryExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclUnaryExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+override TerraformDotnet.Hcl.Nodes.HclVariableExpression.Accept(TerraformDotnet.Hcl.Nodes.IHclVisitor! visitor) -> void
+override TerraformDotnet.Hcl.Nodes.HclVariableExpression.DeepClone() -> TerraformDotnet.Hcl.Nodes.HclNode!
+static readonly TerraformDotnet.Hcl.Evaluation.HclValue.False -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static readonly TerraformDotnet.Hcl.Evaluation.HclValue.Null -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static readonly TerraformDotnet.Hcl.Evaluation.HclValue.True -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Common.Mark.operator !=(TerraformDotnet.Hcl.Common.Mark left, TerraformDotnet.Hcl.Common.Mark right) -> bool
+static TerraformDotnet.Hcl.Common.Mark.operator ==(TerraformDotnet.Hcl.Common.Mark left, TerraformDotnet.Hcl.Common.Mark right) -> bool
+static TerraformDotnet.Hcl.Evaluation.HclValue.FromBool(bool value) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Evaluation.HclValue.FromNumber(double value) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Evaluation.HclValue.FromObject(System.Collections.Generic.IDictionary<string!, TerraformDotnet.Hcl.Evaluation.HclValue!>! entries) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Evaluation.HclValue.FromString(string! value) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Evaluation.HclValue.FromTuple(System.Collections.Generic.IList<TerraformDotnet.Hcl.Evaluation.HclValue!>! elements) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Evaluation.HclValue.operator !=(TerraformDotnet.Hcl.Evaluation.HclValue? left, TerraformDotnet.Hcl.Evaluation.HclValue? right) -> bool
+static TerraformDotnet.Hcl.Evaluation.HclValue.operator ==(TerraformDotnet.Hcl.Evaluation.HclValue? left, TerraformDotnet.Hcl.Evaluation.HclValue? right) -> bool
+static TerraformDotnet.Hcl.Evaluation.HclValue.Unknown(string! source, System.Collections.Generic.IList<TerraformDotnet.Hcl.Evaluation.HclValue!>? args = null) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Nodes.HclFile.Load(System.ReadOnlySpan<byte> hclData) -> TerraformDotnet.Hcl.Nodes.HclFile!
+static TerraformDotnet.Hcl.Nodes.HclFileParser.Parse(System.ReadOnlySpan<byte> hclData, bool preserveComments = true) -> TerraformDotnet.Hcl.Nodes.HclFile!
+static TerraformDotnet.Hcl.Writer.HclWriterOptions.Default.get -> TerraformDotnet.Hcl.Writer.HclWriterOptions!
+static TerraformDotnet.Hcl.Writer.Utf8HclWriter.AlignAttributes(System.Collections.Generic.IReadOnlyList<string!>! attributeNames) -> System.Collections.Generic.Dictionary<string!, int>!
+TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.And = 28 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.AttributeName = 7 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.BlockEnd = 4 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.BlockLabel = 6 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.BlockStart = 3 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.BlockType = 5 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.BoolLiteral = 11 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.CloseBrace = 18 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.CloseBracket = 20 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.CloseParen = 22 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Colon = 38 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Comma = 42 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Comment = 46 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.DollarBrace = 43 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Dot = 41 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Ellipsis = 40 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Eof = 2 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.EqualEqual = 31 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Equals = 8 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.FatArrow = 39 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.FunctionCall = 47 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.GreaterEqual = 36 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.GreaterThan = 34 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.HeredocEnd = 16 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.HeredocStart = 15 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Identifier = 45 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.LessEqual = 35 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.LessThan = 33 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Minus = 24 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.NewLine = 1 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.None = 0 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Not = 30 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.NotEqual = 32 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.NullLiteral = 12 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.NumberLiteral = 10 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.OpenBrace = 17 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.OpenBracket = 19 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.OpenParen = 21 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Or = 29 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Percent = 27 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.PercentBrace = 44 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Plus = 23 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Question = 37 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Slash = 26 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.Star = 25 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.StringLiteral = 9 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.TemplateDirective = 14 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.HclTokenType.TemplateInterpolation = 13 -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Common.Mark
+TerraformDotnet.Hcl.Common.Mark.Column.get -> int
+TerraformDotnet.Hcl.Common.Mark.Equals(TerraformDotnet.Hcl.Common.Mark other) -> bool
+TerraformDotnet.Hcl.Common.Mark.Line.get -> int
+TerraformDotnet.Hcl.Common.Mark.Mark() -> void
+TerraformDotnet.Hcl.Common.Mark.Mark(int offset, int line, int column) -> void
+TerraformDotnet.Hcl.Common.Mark.Offset.get -> int
+TerraformDotnet.Hcl.Common.StringLiteralStyle
+TerraformDotnet.Hcl.Common.StringLiteralStyle.Heredoc = 1 -> TerraformDotnet.Hcl.Common.StringLiteralStyle
+TerraformDotnet.Hcl.Common.StringLiteralStyle.IndentedHeredoc = 2 -> TerraformDotnet.Hcl.Common.StringLiteralStyle
+TerraformDotnet.Hcl.Common.StringLiteralStyle.Quoted = 0 -> TerraformDotnet.Hcl.Common.StringLiteralStyle
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.ContainsVariable(string! name) -> bool
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.Count.get -> int
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.CreateChildScope() -> TerraformDotnet.Hcl.Evaluation.HclEvaluationContext!
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.HclEvaluationContext() -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.Parent.get -> TerraformDotnet.Hcl.Evaluation.HclEvaluationContext?
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.SetVariable(string! name, TerraformDotnet.Hcl.Evaluation.HclValue! value) -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.TryGetVariable(string! name, out TerraformDotnet.Hcl.Evaluation.HclValue! value) -> bool
+TerraformDotnet.Hcl.Evaluation.HclEvaluator
+TerraformDotnet.Hcl.Evaluation.HclEvaluator.Evaluate(TerraformDotnet.Hcl.Nodes.HclExpression! expression, TerraformDotnet.Hcl.Evaluation.HclEvaluationContext! context) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+TerraformDotnet.Hcl.Evaluation.HclEvaluator.HclEvaluator() -> void
+TerraformDotnet.Hcl.Evaluation.HclUnresolvableException
+TerraformDotnet.Hcl.Evaluation.HclUnresolvableException.HclUnresolvableException(string! message) -> void
+TerraformDotnet.Hcl.Evaluation.HclUnresolvableException.HclUnresolvableException(string! message, TerraformDotnet.Hcl.Common.Mark position) -> void
+TerraformDotnet.Hcl.Evaluation.HclUnresolvableException.HclUnresolvableException(string! variableName, string! message, TerraformDotnet.Hcl.Common.Mark position) -> void
+TerraformDotnet.Hcl.Evaluation.HclUnresolvableException.VariableName.get -> string?
+TerraformDotnet.Hcl.Evaluation.HclValue
+TerraformDotnet.Hcl.Evaluation.HclValue.BoolValue.get -> bool
+TerraformDotnet.Hcl.Evaluation.HclValue.Equals(TerraformDotnet.Hcl.Evaluation.HclValue? other) -> bool
+TerraformDotnet.Hcl.Evaluation.HclValue.IsTruthy.get -> bool
+TerraformDotnet.Hcl.Evaluation.HclValue.NumberValue.get -> double
+TerraformDotnet.Hcl.Evaluation.HclValue.ObjectValue.get -> System.Collections.ObjectModel.ReadOnlyDictionary<string!, TerraformDotnet.Hcl.Evaluation.HclValue!>!
+TerraformDotnet.Hcl.Evaluation.HclValue.StringValue.get -> string!
+TerraformDotnet.Hcl.Evaluation.HclValue.ToHclString() -> string!
+TerraformDotnet.Hcl.Evaluation.HclValue.TupleValue.get -> System.Collections.ObjectModel.ReadOnlyCollection<TerraformDotnet.Hcl.Evaluation.HclValue!>!
+TerraformDotnet.Hcl.Evaluation.HclValue.Type.get -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValue.UnknownArgs.get -> System.Collections.ObjectModel.ReadOnlyCollection<TerraformDotnet.Hcl.Evaluation.HclValue!>!
+TerraformDotnet.Hcl.Evaluation.HclValue.UnknownSource.get -> string!
+TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValueType.Bool = 2 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValueType.Null = 3 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValueType.Number = 1 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValueType.Object = 5 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValueType.String = 0 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValueType.Tuple = 4 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.HclValueType.Unknown = 6 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Exceptions.HclException
+TerraformDotnet.Hcl.Exceptions.HclException.HclException(string! message) -> void
+TerraformDotnet.Hcl.Exceptions.HclException.HclException(string! message, System.Exception! innerException) -> void
+TerraformDotnet.Hcl.Exceptions.HclException.HclException(string! message, TerraformDotnet.Hcl.Common.Mark position) -> void
+TerraformDotnet.Hcl.Exceptions.HclException.HclException(string! message, TerraformDotnet.Hcl.Common.Mark position, string! path) -> void
+TerraformDotnet.Hcl.Exceptions.HclException.HclException(string! message, TerraformDotnet.Hcl.Common.Mark position, System.Exception! innerException) -> void
+TerraformDotnet.Hcl.Exceptions.HclException.Path.get -> string?
+TerraformDotnet.Hcl.Exceptions.HclException.Position.get -> TerraformDotnet.Hcl.Common.Mark?
+TerraformDotnet.Hcl.Exceptions.HclSemanticException
+TerraformDotnet.Hcl.Exceptions.HclSemanticException.HclSemanticException(string! message, TerraformDotnet.Hcl.Common.Mark position) -> void
+TerraformDotnet.Hcl.Exceptions.HclSemanticException.HclSemanticException(string! message, TerraformDotnet.Hcl.Common.Mark position, string! path) -> void
+TerraformDotnet.Hcl.Exceptions.HclSyntaxException
+TerraformDotnet.Hcl.Exceptions.HclSyntaxException.HclSyntaxException(string! message, TerraformDotnet.Hcl.Common.Mark position) -> void
+TerraformDotnet.Hcl.Exceptions.HclSyntaxException.HclSyntaxException(string! message, TerraformDotnet.Hcl.Common.Mark position, string! path) -> void
+TerraformDotnet.Hcl.Exceptions.MaxRecursionDepthExceededException
+TerraformDotnet.Hcl.Exceptions.MaxRecursionDepthExceededException.CurrentDepth.get -> int
+TerraformDotnet.Hcl.Exceptions.MaxRecursionDepthExceededException.MaxDepth.get -> int
+TerraformDotnet.Hcl.Exceptions.MaxRecursionDepthExceededException.MaxRecursionDepthExceededException(int maxDepth, int currentDepth, TerraformDotnet.Hcl.Common.Mark position) -> void
+TerraformDotnet.Hcl.Nodes.HclAttribute
+TerraformDotnet.Hcl.Nodes.HclAttribute.HclAttribute() -> void
+TerraformDotnet.Hcl.Nodes.HclAttribute.Name.get -> string!
+TerraformDotnet.Hcl.Nodes.HclAttribute.Name.set -> void
+TerraformDotnet.Hcl.Nodes.HclAttribute.Value.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclAttribute.Value.set -> void
+TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression
+TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression.HclAttributeAccessExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression.Name.get -> string!
+TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression.Name.set -> void
+TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression.Source.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression.Source.set -> void
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression.HclBinaryExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression.Left.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression.Left.set -> void
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression.Operator.get -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression.Operator.set -> void
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression.Right.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclBinaryExpression.Right.set -> void
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.Add = 0 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.And = 11 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.Divide = 3 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.Equal = 5 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.GreaterEqual = 10 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.GreaterThan = 8 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.LessEqual = 9 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.LessThan = 7 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.Modulo = 4 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.Multiply = 2 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.NotEqual = 6 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.Or = 12 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBinaryOperator.Subtract = 1 -> TerraformDotnet.Hcl.Nodes.HclBinaryOperator
+TerraformDotnet.Hcl.Nodes.HclBlock
+TerraformDotnet.Hcl.Nodes.HclBlock.Body.get -> TerraformDotnet.Hcl.Nodes.HclBody!
+TerraformDotnet.Hcl.Nodes.HclBlock.Body.set -> void
+TerraformDotnet.Hcl.Nodes.HclBlock.HclBlock() -> void
+TerraformDotnet.Hcl.Nodes.HclBlock.Labels.get -> System.Collections.Generic.List<string!>!
+TerraformDotnet.Hcl.Nodes.HclBlock.Type.get -> string!
+TerraformDotnet.Hcl.Nodes.HclBlock.Type.set -> void
+TerraformDotnet.Hcl.Nodes.HclBody
+TerraformDotnet.Hcl.Nodes.HclBody.Attributes.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclAttribute!>!
+TerraformDotnet.Hcl.Nodes.HclBody.Blocks.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclBlock!>!
+TerraformDotnet.Hcl.Nodes.HclBody.HclBody() -> void
+TerraformDotnet.Hcl.Nodes.HclComment
+TerraformDotnet.Hcl.Nodes.HclComment.End.get -> TerraformDotnet.Hcl.Common.Mark
+TerraformDotnet.Hcl.Nodes.HclComment.End.set -> void
+TerraformDotnet.Hcl.Nodes.HclComment.HclComment() -> void
+TerraformDotnet.Hcl.Nodes.HclComment.Start.get -> TerraformDotnet.Hcl.Common.Mark
+TerraformDotnet.Hcl.Nodes.HclComment.Start.set -> void
+TerraformDotnet.Hcl.Nodes.HclComment.Style.get -> TerraformDotnet.Hcl.Nodes.HclCommentStyle
+TerraformDotnet.Hcl.Nodes.HclComment.Style.set -> void
+TerraformDotnet.Hcl.Nodes.HclComment.Text.get -> string!
+TerraformDotnet.Hcl.Nodes.HclComment.Text.set -> void
+TerraformDotnet.Hcl.Nodes.HclCommentStyle
+TerraformDotnet.Hcl.Nodes.HclCommentStyle.Block = 2 -> TerraformDotnet.Hcl.Nodes.HclCommentStyle
+TerraformDotnet.Hcl.Nodes.HclCommentStyle.Hash = 1 -> TerraformDotnet.Hcl.Nodes.HclCommentStyle
+TerraformDotnet.Hcl.Nodes.HclCommentStyle.Line = 0 -> TerraformDotnet.Hcl.Nodes.HclCommentStyle
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression.Condition.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression.Condition.set -> void
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression.FalseResult.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression.FalseResult.set -> void
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression.HclConditionalExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression.TrueResult.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclConditionalExpression.TrueResult.set -> void
+TerraformDotnet.Hcl.Nodes.HclExpression
+TerraformDotnet.Hcl.Nodes.HclExpression.HclExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclFile
+TerraformDotnet.Hcl.Nodes.HclFile.Body.get -> TerraformDotnet.Hcl.Nodes.HclBody!
+TerraformDotnet.Hcl.Nodes.HclFile.Body.set -> void
+TerraformDotnet.Hcl.Nodes.HclFile.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclFile.HclFile() -> void
+TerraformDotnet.Hcl.Nodes.HclFileEmitter
+TerraformDotnet.Hcl.Nodes.HclFileEmitter.Emit(TerraformDotnet.Hcl.Nodes.HclFile! file) -> void
+TerraformDotnet.Hcl.Nodes.HclFileEmitter.HclFileEmitter(TerraformDotnet.Hcl.Writer.Utf8HclWriter! writer, bool preserveComments = true) -> void
+TerraformDotnet.Hcl.Nodes.HclFileParser
+TerraformDotnet.Hcl.Nodes.HclForExpression
+TerraformDotnet.Hcl.Nodes.HclForExpression.Collection.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclForExpression.Collection.set -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.Condition.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Hcl.Nodes.HclForExpression.Condition.set -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.HclForExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.IsGrouped.get -> bool
+TerraformDotnet.Hcl.Nodes.HclForExpression.IsGrouped.set -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.IsObjectFor.get -> bool
+TerraformDotnet.Hcl.Nodes.HclForExpression.IsObjectFor.set -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.KeyExpression.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Hcl.Nodes.HclForExpression.KeyExpression.set -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.KeyVariable.get -> string!
+TerraformDotnet.Hcl.Nodes.HclForExpression.KeyVariable.set -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.ValueExpression.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclForExpression.ValueExpression.set -> void
+TerraformDotnet.Hcl.Nodes.HclForExpression.ValueVariable.get -> string?
+TerraformDotnet.Hcl.Nodes.HclForExpression.ValueVariable.set -> void
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.Arguments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclExpression!>!
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.ExpandFinalArgument.get -> bool
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.ExpandFinalArgument.set -> void
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.HclFunctionCallExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.Name.get -> string!
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.Name.set -> void
+TerraformDotnet.Hcl.Nodes.HclIndexExpression
+TerraformDotnet.Hcl.Nodes.HclIndexExpression.Collection.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclIndexExpression.Collection.set -> void
+TerraformDotnet.Hcl.Nodes.HclIndexExpression.HclIndexExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclIndexExpression.Index.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclIndexExpression.Index.set -> void
+TerraformDotnet.Hcl.Nodes.HclIndexExpression.IsLegacy.get -> bool
+TerraformDotnet.Hcl.Nodes.HclIndexExpression.IsLegacy.set -> void
+TerraformDotnet.Hcl.Nodes.HclLiteralExpression
+TerraformDotnet.Hcl.Nodes.HclLiteralExpression.HclLiteralExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Kind.get -> TerraformDotnet.Hcl.Nodes.HclLiteralKind
+TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Kind.set -> void
+TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Value.get -> string?
+TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Value.set -> void
+TerraformDotnet.Hcl.Nodes.HclLiteralKind
+TerraformDotnet.Hcl.Nodes.HclLiteralKind.Bool = 2 -> TerraformDotnet.Hcl.Nodes.HclLiteralKind
+TerraformDotnet.Hcl.Nodes.HclLiteralKind.Null = 3 -> TerraformDotnet.Hcl.Nodes.HclLiteralKind
+TerraformDotnet.Hcl.Nodes.HclLiteralKind.Number = 1 -> TerraformDotnet.Hcl.Nodes.HclLiteralKind
+TerraformDotnet.Hcl.Nodes.HclLiteralKind.String = 0 -> TerraformDotnet.Hcl.Nodes.HclLiteralKind
+TerraformDotnet.Hcl.Nodes.HclNode
+TerraformDotnet.Hcl.Nodes.HclNode.End.get -> TerraformDotnet.Hcl.Common.Mark
+TerraformDotnet.Hcl.Nodes.HclNode.End.set -> void
+TerraformDotnet.Hcl.Nodes.HclNode.HclNode() -> void
+TerraformDotnet.Hcl.Nodes.HclNode.LeadingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclNode.Start.get -> TerraformDotnet.Hcl.Common.Mark
+TerraformDotnet.Hcl.Nodes.HclNode.Start.set -> void
+TerraformDotnet.Hcl.Nodes.HclNode.TrailingComment.get -> TerraformDotnet.Hcl.Nodes.HclComment?
+TerraformDotnet.Hcl.Nodes.HclNode.TrailingComment.set -> void
+TerraformDotnet.Hcl.Nodes.HclNodeType
+TerraformDotnet.Hcl.Nodes.HclNodeType.Attribute = 3 -> TerraformDotnet.Hcl.Nodes.HclNodeType
+TerraformDotnet.Hcl.Nodes.HclNodeType.Block = 2 -> TerraformDotnet.Hcl.Nodes.HclNodeType
+TerraformDotnet.Hcl.Nodes.HclNodeType.Body = 1 -> TerraformDotnet.Hcl.Nodes.HclNodeType
+TerraformDotnet.Hcl.Nodes.HclNodeType.Expression = 4 -> TerraformDotnet.Hcl.Nodes.HclNodeType
+TerraformDotnet.Hcl.Nodes.HclNodeType.File = 0 -> TerraformDotnet.Hcl.Nodes.HclNodeType
+TerraformDotnet.Hcl.Nodes.HclObjectElement
+TerraformDotnet.Hcl.Nodes.HclObjectElement.ForceKey.get -> bool
+TerraformDotnet.Hcl.Nodes.HclObjectElement.ForceKey.set -> void
+TerraformDotnet.Hcl.Nodes.HclObjectElement.HclObjectElement() -> void
+TerraformDotnet.Hcl.Nodes.HclObjectElement.Key.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclObjectElement.Key.set -> void
+TerraformDotnet.Hcl.Nodes.HclObjectElement.UsesColon.get -> bool
+TerraformDotnet.Hcl.Nodes.HclObjectElement.UsesColon.set -> void
+TerraformDotnet.Hcl.Nodes.HclObjectElement.Value.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclObjectElement.Value.set -> void
+TerraformDotnet.Hcl.Nodes.HclObjectExpression
+TerraformDotnet.Hcl.Nodes.HclObjectExpression.Elements.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclObjectElement!>!
+TerraformDotnet.Hcl.Nodes.HclObjectExpression.HclObjectExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclSplatExpression
+TerraformDotnet.Hcl.Nodes.HclSplatExpression.HclSplatExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclSplatExpression.IsFullSplat.get -> bool
+TerraformDotnet.Hcl.Nodes.HclSplatExpression.IsFullSplat.set -> void
+TerraformDotnet.Hcl.Nodes.HclSplatExpression.Source.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclSplatExpression.Source.set -> void
+TerraformDotnet.Hcl.Nodes.HclSplatExpression.Traversal.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclExpression!>!
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.HclTemplateExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.HeredocMarker.get -> string?
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.HeredocMarker.set -> void
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.IsHeredoc.get -> bool
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.IsHeredoc.set -> void
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.IsIndented.get -> bool
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.IsIndented.set -> void
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.Parts.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclExpression!>!
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.RawContent.get -> string!
+TerraformDotnet.Hcl.Nodes.HclTemplateExpression.RawContent.set -> void
+TerraformDotnet.Hcl.Nodes.HclTemplateWrapExpression
+TerraformDotnet.Hcl.Nodes.HclTemplateWrapExpression.HclTemplateWrapExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclTemplateWrapExpression.Wrapped.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclTemplateWrapExpression.Wrapped.set -> void
+TerraformDotnet.Hcl.Nodes.HclTupleExpression
+TerraformDotnet.Hcl.Nodes.HclTupleExpression.Elements.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclExpression!>!
+TerraformDotnet.Hcl.Nodes.HclTupleExpression.HclTupleExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclUnaryExpression
+TerraformDotnet.Hcl.Nodes.HclUnaryExpression.HclUnaryExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclUnaryExpression.Operand.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Hcl.Nodes.HclUnaryExpression.Operand.set -> void
+TerraformDotnet.Hcl.Nodes.HclUnaryExpression.Operator.get -> TerraformDotnet.Hcl.Nodes.HclUnaryOperator
+TerraformDotnet.Hcl.Nodes.HclUnaryExpression.Operator.set -> void
+TerraformDotnet.Hcl.Nodes.HclUnaryOperator
+TerraformDotnet.Hcl.Nodes.HclUnaryOperator.Negate = 0 -> TerraformDotnet.Hcl.Nodes.HclUnaryOperator
+TerraformDotnet.Hcl.Nodes.HclUnaryOperator.Not = 1 -> TerraformDotnet.Hcl.Nodes.HclUnaryOperator
+TerraformDotnet.Hcl.Nodes.HclVariableExpression
+TerraformDotnet.Hcl.Nodes.HclVariableExpression.HclVariableExpression() -> void
+TerraformDotnet.Hcl.Nodes.HclVariableExpression.Name.get -> string!
+TerraformDotnet.Hcl.Nodes.HclVariableExpression.Name.set -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitAttribute(TerraformDotnet.Hcl.Nodes.HclAttribute! attribute) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitAttributeAccess(TerraformDotnet.Hcl.Nodes.HclAttributeAccessExpression! attributeAccess) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitBinary(TerraformDotnet.Hcl.Nodes.HclBinaryExpression! binary) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitBlock(TerraformDotnet.Hcl.Nodes.HclBlock! block) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitBody(TerraformDotnet.Hcl.Nodes.HclBody! body) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitConditional(TerraformDotnet.Hcl.Nodes.HclConditionalExpression! conditional) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitFile(TerraformDotnet.Hcl.Nodes.HclFile! file) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitFor(TerraformDotnet.Hcl.Nodes.HclForExpression! forExpr) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitFunctionCall(TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression! functionCall) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitIndex(TerraformDotnet.Hcl.Nodes.HclIndexExpression! index) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitLiteral(TerraformDotnet.Hcl.Nodes.HclLiteralExpression! literal) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitObject(TerraformDotnet.Hcl.Nodes.HclObjectExpression! obj) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitSplat(TerraformDotnet.Hcl.Nodes.HclSplatExpression! splat) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitTemplate(TerraformDotnet.Hcl.Nodes.HclTemplateExpression! template) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitTemplateWrap(TerraformDotnet.Hcl.Nodes.HclTemplateWrapExpression! templateWrap) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitTuple(TerraformDotnet.Hcl.Nodes.HclTupleExpression! tuple) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitUnary(TerraformDotnet.Hcl.Nodes.HclUnaryExpression! unary) -> void
+TerraformDotnet.Hcl.Nodes.IHclVisitor.VisitVariable(TerraformDotnet.Hcl.Nodes.HclVariableExpression! variable) -> void
+TerraformDotnet.Hcl.Reader.HclReaderOptions
+TerraformDotnet.Hcl.Reader.HclReaderOptions.HclReaderOptions() -> void
+TerraformDotnet.Hcl.Reader.HclReaderOptions.MaxDepth.get -> int
+TerraformDotnet.Hcl.Reader.HclReaderOptions.MaxDepth.init -> void
+TerraformDotnet.Hcl.Reader.HclReaderOptions.ReadComments.get -> bool
+TerraformDotnet.Hcl.Reader.HclReaderOptions.ReadComments.init -> void
+TerraformDotnet.Hcl.Reader.HclReaderState
+TerraformDotnet.Hcl.Reader.HclReaderState.BytesConsumed.get -> long
+TerraformDotnet.Hcl.Reader.HclReaderState.BytesConsumed.init -> void
+TerraformDotnet.Hcl.Reader.HclReaderState.Column.get -> int
+TerraformDotnet.Hcl.Reader.HclReaderState.Column.init -> void
+TerraformDotnet.Hcl.Reader.HclReaderState.CurrentDepth.get -> int
+TerraformDotnet.Hcl.Reader.HclReaderState.CurrentDepth.init -> void
+TerraformDotnet.Hcl.Reader.HclReaderState.HclReaderState() -> void
+TerraformDotnet.Hcl.Reader.HclReaderState.Line.get -> int
+TerraformDotnet.Hcl.Reader.HclReaderState.Line.init -> void
+TerraformDotnet.Hcl.Reader.HclReaderState.Options.get -> TerraformDotnet.Hcl.Reader.HclReaderOptions
+TerraformDotnet.Hcl.Reader.HclReaderState.Options.init -> void
+TerraformDotnet.Hcl.Reader.Utf8HclReader
+TerraformDotnet.Hcl.Reader.Utf8HclReader.BytesConsumed.get -> long
+TerraformDotnet.Hcl.Reader.Utf8HclReader.CommentMarker.get -> byte
+TerraformDotnet.Hcl.Reader.Utf8HclReader.CurrentDepth.get -> int
+TerraformDotnet.Hcl.Reader.Utf8HclReader.CurrentState.get -> TerraformDotnet.Hcl.Reader.HclReaderState
+TerraformDotnet.Hcl.Reader.Utf8HclReader.GetBoolean() -> bool
+TerraformDotnet.Hcl.Reader.Utf8HclReader.GetDecimal() -> decimal
+TerraformDotnet.Hcl.Reader.Utf8HclReader.GetDouble() -> double
+TerraformDotnet.Hcl.Reader.Utf8HclReader.GetInt32() -> int
+TerraformDotnet.Hcl.Reader.Utf8HclReader.GetInt64() -> long
+TerraformDotnet.Hcl.Reader.Utf8HclReader.GetString() -> string?
+TerraformDotnet.Hcl.Reader.Utf8HclReader.IsFinalBlock.get -> bool
+TerraformDotnet.Hcl.Reader.Utf8HclReader.Position.get -> TerraformDotnet.Hcl.Common.Mark
+TerraformDotnet.Hcl.Reader.Utf8HclReader.Read() -> bool
+TerraformDotnet.Hcl.Reader.Utf8HclReader.StringStyle.get -> TerraformDotnet.Hcl.Common.StringLiteralStyle
+TerraformDotnet.Hcl.Reader.Utf8HclReader.TokenStart.get -> TerraformDotnet.Hcl.Common.Mark
+TerraformDotnet.Hcl.Reader.Utf8HclReader.TokenType.get -> TerraformDotnet.Hcl.Common.HclTokenType
+TerraformDotnet.Hcl.Reader.Utf8HclReader.Utf8HclReader() -> void
+TerraformDotnet.Hcl.Reader.Utf8HclReader.Utf8HclReader(System.ReadOnlySpan<byte> hclData, bool isFinalBlock, TerraformDotnet.Hcl.Reader.HclReaderState state) -> void
+TerraformDotnet.Hcl.Reader.Utf8HclReader.Utf8HclReader(System.ReadOnlySpan<byte> hclData, TerraformDotnet.Hcl.Reader.HclReaderOptions options = default(TerraformDotnet.Hcl.Reader.HclReaderOptions)) -> void
+TerraformDotnet.Hcl.Reader.Utf8HclReader.ValueSpan.get -> System.ReadOnlySpan<byte>
+TerraformDotnet.Hcl.Writer.HclWriterOptions
+TerraformDotnet.Hcl.Writer.HclWriterOptions.HclWriterOptions() -> void
+TerraformDotnet.Hcl.Writer.HclWriterOptions.NewLineStyle.get -> TerraformDotnet.Hcl.Writer.NewLineStyle
+TerraformDotnet.Hcl.Writer.HclWriterOptions.NewLineStyle.init -> void
+TerraformDotnet.Hcl.Writer.HclWriterOptions.PreserveComments.get -> bool
+TerraformDotnet.Hcl.Writer.HclWriterOptions.PreserveComments.init -> void
+TerraformDotnet.Hcl.Writer.NewLineStyle
+TerraformDotnet.Hcl.Writer.NewLineStyle.CrLf = 1 -> TerraformDotnet.Hcl.Writer.NewLineStyle
+TerraformDotnet.Hcl.Writer.NewLineStyle.Lf = 0 -> TerraformDotnet.Hcl.Writer.NewLineStyle
+TerraformDotnet.Hcl.Writer.Utf8HclWriter
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.BytesWritten.get -> long
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.CurrentDepth.get -> int
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.Dispose() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.Flush() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.Utf8HclWriter(System.Buffers.IBufferWriter<byte>! output, TerraformDotnet.Hcl.Writer.HclWriterOptions? options = null) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.Utf8HclWriter(System.IO.Stream! stream) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.Utf8HclWriter(System.IO.Stream! stream, TerraformDotnet.Hcl.Writer.HclWriterOptions! options) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteArrow() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteAttributeEnd() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteAttributeName(string! name, int namePadding = 0) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteBlockComment(string! text) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteBlockEnd() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteBlockStart(string! type, params string![]! labels) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteBooleanValue(bool value) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteColon() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteComma() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteEquals() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteHashComment(string! text) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteIndent() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteLineComment(string! text) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteNewLine() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteNullValue() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteNumberValue(decimal value) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteNumberValue(double value) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteNumberValue(int value) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteNumberValue(long value) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteObjectEnd() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteObjectStart() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteRawHcl(System.ReadOnlySpan<byte> hcl) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteRawString(string! text) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteSpace() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteStringValue(string! value) -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteTupleEnd() -> void
+TerraformDotnet.Hcl.Writer.Utf8HclWriter.WriteTupleStart() -> void

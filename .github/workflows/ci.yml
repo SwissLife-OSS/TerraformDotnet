@@ -32,7 +32,7 @@ jobs:
 
       - name: Check for breaking API changes
         shell: bash
-        run: dotnet build src/TerraformDotnet.Hcl/TerraformDotnet.Hcl.csproj --no-restore -warnaserror:RS0016,RS0017
+        run: dotnet build ./all.csproj --no-restore -warnaserror:RS0016,RS0017
 
       - name: Run tests
         shell: bash
