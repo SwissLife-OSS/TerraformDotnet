@@ -2,7 +2,8 @@
 
 A .NET toolkit for working with Terraform — parse HCL, load modules, inspect variables, and generate Terraform code.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![NuGet](https://img.shields.io/nuget/v/TerraformDotnet.svg)](https://www.nuget.org/packages/TerraformDotnet)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Built with GitHub Copilot](https://img.shields.io/badge/Built%20with-GitHub%20Copilot%20%C2%B7%20Claude%20Opus%204.6-8957e5?logo=githubcopilot)](https://github.com/features/copilot)
 
 ## Packages
 
