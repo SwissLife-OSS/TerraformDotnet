@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+
+    <!-- AOT compatibility -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+
+    <!-- Public API analyzer - detect breaking changes -->
+    <EnablePackageValidation>true</EnablePackageValidation>
+
+    <!-- Package metadata -->
+    <PackageId>TerraformDotnet</PackageId>
+    <Description>High-level Terraform module loader, inspector, and code emitter for .NET. Load Terraform modules, inspect variables/outputs/resources, and generate module calls.</Description>
+    <PackageTags>terraform;module;codegen;hcl;dotnet;aot</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: missing XML doc; RS0016/RS0017: public API tracking -->
+    <NoWarn>$(NoWarn);CS1591;RS0016;RS0017;RS0027</NoWarn>
+  </PropertyGroup>
+
+  <!-- Expose internals to test project -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="TerraformDotnet.Tests" />
+  </ItemGroup>
+
+  <!-- Public API tracking -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="PublicAPI.Shipped.txt" />
+    <AdditionalFiles Include="PublicAPI.Unshipped.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TerraformDotnet.Hcl\TerraformDotnet.Hcl.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>
