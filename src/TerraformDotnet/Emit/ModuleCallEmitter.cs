@@ -176,7 +176,7 @@ public sealed class ModuleCallEmitter
                 continue;
             }
 
-            if (!first)
+            if (!first && !options.CompactSpacing)
             {
                 sb.AppendLine();
             }
@@ -229,9 +229,13 @@ public sealed class ModuleCallEmitter
     /// When <c>true</c> (default), each variable gets a <c># (Required)</c> or <c># (Optional)</c>
     /// description comment above it. Set to <c>false</c> to suppress these comments.
     /// </param>
+    /// <param name="compactSpacing">
+    /// When <c>true</c>, suppresses blank lines between variable assignments. Default: <c>false</c>.
+    /// </param>
     public string EmitInputValues(
         IDictionary<string, InputValue> values,
-        bool includeQualifierComments = true)
+        bool includeQualifierComments = true,
+        bool compactSpacing = false)
     {
         var sb = new StringBuilder();
         var variableLookup = BuildVariableLookup();
@@ -242,7 +246,7 @@ public sealed class ModuleCallEmitter
 
         foreach (var kvp in values)
         {
-            if (!first)
+            if (!first && !compactSpacing)
             {
                 sb.AppendLine();
             }

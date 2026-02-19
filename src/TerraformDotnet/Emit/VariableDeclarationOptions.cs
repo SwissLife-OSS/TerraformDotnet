@@ -16,4 +16,7 @@ public sealed class VariableDeclarationOptions
 
     /// <summary>Variable names to exclude from the output. Default: empty.</summary>
     public ISet<string> ExcludeVariables { get; init; } = new HashSet<string>();
+
+    /// <summary>Suppress blank lines between variable blocks. Default: <c>false</c>.</summary>
+    public bool CompactSpacing { get; init; }
 }
