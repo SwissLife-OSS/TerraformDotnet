@@ -89,7 +89,7 @@ public class ModuleCallEmitterTests
         var emitter = new ModuleCallEmitter(call);
         var result = emitter.EmitModuleBlock();
 
-        Assert.Contains("source  = \"./modules/app\"", result);
+        Assert.Contains("source = \"./modules/app\"", result);
         Assert.Contains("project = var.project", result);
         Assert.Contains("region  = var.region", result);
         Assert.Contains("labels  = var.labels", result);
@@ -137,6 +137,34 @@ public class ModuleCallEmitterTests
         Assert.Contains("count      = var.worker_count", result);
         Assert.Contains("depends_on = [module.network, module.security]", result);
         Assert.Contains("providers  = { cloud = cloud.west }", result);
+    }
+
+    [Fact]
+    public void EmitModuleBlock_GroupsAlignedIndependently()
+    {
+        var call = new ModuleCallBuilder("svc")
+            .Source("git::https://example.com/modules/svc?ref=v1.0")
+            .Set("department", "var.department")
+            .Set("environment", "var.environment")
+            .Set("tags", "local.tags")
+            .Count("var.svc_count")
+            .DependsOn("module.network")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var result = emitter.EmitModuleBlock();
+
+        // Source group: only "source" → no padding
+        Assert.Contains("source = \"git::https://example.com/modules/svc?ref=v1.0\"", result);
+
+        // Args group: aligned to "environment" (11 chars)
+        Assert.Contains("department  = var.department", result);
+        Assert.Contains("environment = var.environment", result);
+        Assert.Contains("tags        = local.tags", result);
+
+        // Meta group: aligned to "depends_on" (10 chars)
+        Assert.Contains("count      = var.svc_count", result);
+        Assert.Contains("depends_on = [module.network]", result);
     }
 
     [Fact]
@@ -314,7 +342,8 @@ public class ModuleCallEmitterTests
 
         var result = emitter.EmitInputValues(values);
 
-        Assert.Contains("name   = \"my-project\"", result);
+        // Default spacing: each value is its own group → no extra padding
+        Assert.Contains("name = \"my-project\"", result);
         Assert.Contains("region = \"us-west-2\"", result);
     }
 
@@ -394,7 +423,8 @@ public class ModuleCallEmitterTests
             ["long_name"] = "2",
         };
 
-        var result = emitter.EmitInputValues(values);
+        // Compact: all values form one group → '=' aligned to longest name
+        var result = emitter.EmitInputValues(values, compactSpacing: true);
         var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         // Both '=' signs should be at the same column
@@ -440,6 +470,11 @@ public class ModuleCallEmitterTests
         Assert.Contains("name", result);
         Assert.Contains("region", result);
         Assert.Contains("tier", result);
+
+        // Compact: all values form one group → aligned to longest name ("region")
+        Assert.Contains("name   = \"my-project\"", result);
+        Assert.Contains("region = \"us-west-2\"", result);
+        Assert.Contains("tier   = \"basic\"", result);
     }
 
     [Fact]
@@ -460,6 +495,10 @@ public class ModuleCallEmitterTests
 
         // Default has a blank line between entries
         Assert.Contains("\"a\"\n\nregion", result);
+
+        // Each value is its own group → no extra padding
+        Assert.Contains("name = \"a\"", result);
+        Assert.Contains("region = \"b\"", result);
     }
 
     // ── WriteTo ─────────────────────────────────────────────────

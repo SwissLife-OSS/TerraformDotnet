@@ -23,6 +23,12 @@ public abstract class HclNode
     public HclComment? TrailingComment { get; set; }
 
     /// <summary>
+    /// Indicates that a blank line appeared before this node in the source.
+    /// Used by the emitter for blank-line preservation and per-group <c>=</c> alignment.
+    /// </summary>
+    public bool HasLeadingBlankLine { get; set; }
+
+    /// <summary>
     /// Accepts a visitor for tree traversal.
     /// </summary>
     /// <param name="visitor">The visitor to accept.</param>

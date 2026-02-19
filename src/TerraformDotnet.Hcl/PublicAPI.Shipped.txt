@@ -309,6 +309,8 @@ TerraformDotnet.Hcl.Nodes.HclNode.HclNode() -> void
 TerraformDotnet.Hcl.Nodes.HclNode.LeadingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
 TerraformDotnet.Hcl.Nodes.HclNode.Start.get -> TerraformDotnet.Hcl.Common.Mark
 TerraformDotnet.Hcl.Nodes.HclNode.Start.set -> void
+TerraformDotnet.Hcl.Nodes.HclNode.HasLeadingBlankLine.get -> bool
+TerraformDotnet.Hcl.Nodes.HclNode.HasLeadingBlankLine.set -> void
 TerraformDotnet.Hcl.Nodes.HclNode.TrailingComment.get -> TerraformDotnet.Hcl.Nodes.HclComment?
 TerraformDotnet.Hcl.Nodes.HclNode.TrailingComment.set -> void
 TerraformDotnet.Hcl.Nodes.HclNodeType

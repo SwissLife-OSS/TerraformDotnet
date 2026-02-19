@@ -210,6 +210,139 @@ public sealed class HclRoundTripTests
         AssertRoundTrip(input);
     }
 
+    // ── Blank line preservation & per-group alignment ───────────
+
+    [Fact]
+    public void BlankLineBetweenAttributes_Preserved()
+    {
+        string input =
+            "resource \"test\" \"main\" {\n" +
+            "  source = \"./modules/test\"\n" +
+            "\n" +
+            "  name = \"foo\"\n" +
+            "}\n";
+
+        AssertIdempotent(input);
+    }
+
+    [Fact]
+    public void BlankLineBetweenAttributes_HasLeadingBlankLineFlag()
+    {
+        string input =
+            "resource \"test\" \"main\" {\n" +
+            "  first = 1\n" +
+            "\n" +
+            "  second = 2\n" +
+            "}\n";
+
+        HclFile file = Parse(input);
+        var block = file.Body.Blocks[0];
+        var attrs = block.Body.Attributes;
+
+        Assert.False(attrs[0].HasLeadingBlankLine);
+        Assert.True(attrs[1].HasLeadingBlankLine);
+    }
+
+    [Fact]
+    public void PerGroupAlignment_IndependentGroups()
+    {
+        // terraform fmt aligns = per group separated by blank lines
+        string input =
+            "resource \"test\" \"main\" {\n" +
+            "  source = \"./modules/test\"\n" +
+            "\n" +
+            "  department  = var.department\n" +
+            "  environment = var.environment\n" +
+            "  tags         = local.tags\n" +
+            "}\n";
+
+        // After parse → emit, each group should be aligned independently
+        HclFile file = Parse(input);
+        string output = EmitFile(file);
+
+        // Group 1: "source" alone → no padding
+        Assert.Contains("  source = \"./modules/test\"", output);
+        // Group 2: "department", "environment", "tags" → aligned to "environment"
+        Assert.Contains("  department  = var.department", output);
+        Assert.Contains("  environment = var.environment", output);
+        Assert.Contains("  tags        = local.tags", output);
+    }
+
+    [Fact]
+    public void PerGroupAlignment_NoBlankLine_GlobalAlignment()
+    {
+        // Without blank lines, all attributes form one group
+        string input =
+            "resource \"test\" \"main\" {\n" +
+            "  source = \"./modules/test\"\n" +
+            "  environment = var.environment\n" +
+            "}\n";
+
+        HclFile file = Parse(input);
+        string output = EmitFile(file);
+
+        // Both attributes aligned to "environment"
+        Assert.Contains("  source      = \"./modules/test\"", output);
+        Assert.Contains("  environment = var.environment", output);
+    }
+
+    [Fact]
+    public void PerGroupAlignment_BlockBreaksGroup()
+    {
+        // A nested block between attributes breaks alignment groups
+        string input =
+            "resource \"test\" \"main\" {\n" +
+            "  short = 1\n" +
+            "  longer_name = 2\n" +
+            "\n" +
+            "  lifecycle {\n" +
+            "    create_before_destroy = true\n" +
+            "  }\n" +
+            "\n" +
+            "  x = 3\n" +
+            "}\n";
+
+        HclFile file = Parse(input);
+        string output = EmitFile(file);
+
+        // Group 1: "short", "longer_name" aligned together
+        Assert.Contains("  short       = 1", output);
+        Assert.Contains("  longer_name = 2", output);
+        // Group 2: "x" alone → no padding
+        Assert.Contains("  x = 3", output);
+    }
+
+    [Fact]
+    public void BlankLineBetweenTopLevelAttributes_Preserved()
+    {
+        string input =
+            "name = \"hello\"\n" +
+            "\n" +
+            "count = 42\n";
+
+        AssertIdempotent(input);
+    }
+
+    [Fact]
+    public void MultipleBlankLines_CollapsedToOne()
+    {
+        // Multiple blank lines between attributes → one blank line in output
+        string input =
+            "resource \"test\" \"main\" {\n" +
+            "  first = 1\n" +
+            "\n" +
+            "\n" +
+            "\n" +
+            "  second = 2\n" +
+            "}\n";
+
+        HclFile file = Parse(input);
+        string output = EmitFile(file);
+
+        // Should have exactly one blank line between them
+        Assert.Contains("  first = 1\n\n  second = 2", output);
+    }
+
     // ── Structural comparison helpers ───────────────────────────
 
     private static void AssertBodiesEqual(HclBody expected, HclBody actual)

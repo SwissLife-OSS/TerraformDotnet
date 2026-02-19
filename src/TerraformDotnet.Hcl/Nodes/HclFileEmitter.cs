@@ -38,21 +38,16 @@ public sealed class HclFileEmitter
 
     private void EmitBody(HclBody body, bool isTopLevel)
     {
-        // Pre-compute = alignment for attributes in this body
-        var attrNames = new List<string>(body.Attributes.Count);
-        foreach (HclAttribute attr in body.Attributes)
-        {
-            attrNames.Add(attr.Name);
-        }
-
-        Dictionary<string, int> padding = Utf8HclWriter.AlignAttributes(attrNames);
-
         // Build an ordered list of body elements by their Start position
         // so attributes and blocks are emitted in source order.
         var elements = new List<HclNode>(body.Attributes.Count + body.Blocks.Count);
         elements.AddRange(body.Attributes);
         elements.AddRange(body.Blocks);
         elements.Sort((a, b) => a.Start.Offset.CompareTo(b.Start.Offset));
+
+        // Pre-compute = alignment per group.
+        // Groups are consecutive attributes not separated by blank lines or blocks.
+        var padding = ComputePerGroupPadding(elements);
 
         bool previousWasBlock = false;
         bool isFirst = true;
@@ -62,7 +57,7 @@ public sealed class HclFileEmitter
             switch (element)
             {
                 case HclAttribute attr:
-                    if (previousWasBlock && !isFirst)
+                    if (!isFirst && (previousWasBlock || attr.HasLeadingBlankLine))
                     {
                         _writer.WriteNewLine();
                     }
@@ -83,6 +78,52 @@ public sealed class HclFileEmitter
             }
 
             isFirst = false;
+        }
+    }
+
+    private static Dictionary<string, int> ComputePerGroupPadding(List<HclNode> elements)
+    {
+        var result = new Dictionary<string, int>();
+        var groupNames = new List<string>();
+
+        for (int i = 0; i < elements.Count; i++)
+        {
+            if (elements[i] is HclAttribute attr)
+            {
+                if (attr.HasLeadingBlankLine && groupNames.Count > 0)
+                {
+                    MergeGroupPadding(groupNames, result);
+                    groupNames.Clear();
+                }
+
+                groupNames.Add(attr.Name);
+            }
+            else
+            {
+                if (groupNames.Count > 0)
+                {
+                    MergeGroupPadding(groupNames, result);
+                    groupNames.Clear();
+                }
+            }
+        }
+
+        if (groupNames.Count > 0)
+        {
+            MergeGroupPadding(groupNames, result);
+        }
+
+        return result;
+    }
+
+    private static void MergeGroupPadding(
+        List<string> names,
+        Dictionary<string, int> target)
+    {
+        var padding = Utf8HclWriter.AlignAttributes(names);
+        foreach (var kvp in padding)
+        {
+            target[kvp.Key] = kvp.Value;
         }
     }
 

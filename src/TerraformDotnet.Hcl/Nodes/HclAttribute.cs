@@ -28,6 +28,8 @@ public sealed class HclAttribute : HclNode
             End = End,
         };
 
+        clone.HasLeadingBlankLine = HasLeadingBlankLine;
+
         foreach (var comment in LeadingComments)
         {
             clone.LeadingComments.Add(comment);
