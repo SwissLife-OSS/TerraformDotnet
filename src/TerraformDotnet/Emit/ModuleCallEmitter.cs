@@ -40,66 +40,47 @@ public sealed class ModuleCallEmitter
 
         sb.AppendLine($"module \"{_call.Name}\" {{");
 
-        // Collect all attribute names for alignment
-        var attrNames = new List<string> { "source" };
+        // Group 1: source + version
+        var sourceGroup = new List<string> { "source" };
 
         if (_call.Version is not null)
         {
-            attrNames.Add("version");
+            sourceGroup.Add("version");
         }
 
-        foreach (var arg in _call.Arguments)
-        {
-            attrNames.Add(arg.Key);
-        }
-
-        if (_call.Count is not null)
-        {
-            attrNames.Add("count");
-        }
-
-        if (_call.ForEach is not null)
-        {
-            attrNames.Add("for_each");
-        }
-
-        if (_call.DependsOn is not null)
-        {
-            attrNames.Add("depends_on");
-        }
-
-        if (_call.Providers is not null)
-        {
-            attrNames.Add("providers");
-        }
-
-        var padding = Utf8HclWriter.AlignAttributes(attrNames);
+        var sourcePadding = Utf8HclWriter.AlignAttributes(sourceGroup);
 
         // Source (always first)
-        EmitAttribute(sb, "source", $"\"{_call.Source}\"", padding);
+        EmitAttribute(sb, "source", $"\"{_call.Source}\"", sourcePadding);
 
         // Version (if set, right after source)
         if (_call.Version is not null)
         {
-            EmitAttribute(sb, "version", $"\"{_call.Version}\"", padding);
+            EmitAttribute(sb, "version", $"\"{_call.Version}\"", sourcePadding);
         }
 
-        // Blank line before arguments (if there are any)
+        // Group 2: arguments
         if (_call.Arguments.Count > 0)
         {
             sb.AppendLine();
-        }
 
-        // Arguments
-        foreach (var arg in _call.Arguments)
-        {
-            EmitAttribute(sb, arg.Key, arg.Value, padding);
+            var argPadding = Utf8HclWriter.AlignAttributes(_call.Arguments.Keys.ToList());
+
+            foreach (var arg in _call.Arguments)
+            {
+                EmitAttribute(sb, arg.Key, arg.Value, argPadding);
+            }
         }
 
         // Commented optional variables
         if (_call.CommentedOptionalVariables.Count > 0)
         {
             sb.AppendLine();
+
+            var commentedNames = _call.CommentedOptionalVariables
+                .Select(c => c.Name)
+                .ToList();
+            var commentedPadding = Utf8HclWriter.AlignAttributes(commentedNames);
 
             foreach (var commented in _call.CommentedOptionalVariables)
             {
@@ -108,45 +89,67 @@ public sealed class ModuleCallEmitter
                     sb.AppendLine($"  # (Optional) {commented.Description}");
                 }
 
-                var namePad = padding.TryGetValue(commented.Name, out var p)
+                var namePad = commentedPadding.TryGetValue(commented.Name, out var p)
                     ? new string(' ', p)
                     : "";
                 sb.AppendLine($"  # {commented.Name}{namePad} = {commented.SuggestedExpression}");
             }
         }
 
-        // Meta-arguments (at the end, after a blank line)
-        var hasMeta = _call.Count is not null
-            || _call.ForEach is not null
-            || _call.DependsOn is not null
-            || _call.Providers is not null;
-
-        if (hasMeta && _call.Arguments.Count > 0)
-        {
-            sb.AppendLine();
-        }
+        // Group 3: meta-arguments
+        var metaNames = new List<string>();
 
         if (_call.Count is not null)
         {
-            EmitAttribute(sb, "count", _call.Count, padding);
+            metaNames.Add("count");
         }
 
         if (_call.ForEach is not null)
         {
-            EmitAttribute(sb, "for_each", _call.ForEach, padding);
+            metaNames.Add("for_each");
         }
 
         if (_call.DependsOn is not null)
         {
-            var deps = string.Join(", ", _call.DependsOn);
-            EmitAttribute(sb, "depends_on", $"[{deps}]", padding);
+            metaNames.Add("depends_on");
         }
 
         if (_call.Providers is not null)
         {
-            var pairs = _call.Providers.Select(p => $"{p.Key} = {p.Value}");
-            var providersBlock = $"{{ {string.Join(", ", pairs)} }}";
-            EmitAttribute(sb, "providers", providersBlock, padding);
+            metaNames.Add("providers");
+        }
+
+        if (metaNames.Count > 0)
+        {
+            if (_call.Arguments.Count > 0 || _call.CommentedOptionalVariables.Count > 0)
+            {
+                sb.AppendLine();
+            }
+
+            var metaPadding = Utf8HclWriter.AlignAttributes(metaNames);
+
+            if (_call.Count is not null)
+            {
+                EmitAttribute(sb, "count", _call.Count, metaPadding);
+            }
+
+            if (_call.ForEach is not null)
+            {
+                EmitAttribute(sb, "for_each", _call.ForEach, metaPadding);
+            }
+
+            if (_call.DependsOn is not null)
+            {
+                var deps = string.Join(", ", _call.DependsOn);
+                EmitAttribute(sb, "depends_on", $"[{deps}]", metaPadding);
+            }
+
+            if (_call.Providers is not null)
+            {
+                var pairs = _call.Providers.Select(p => $"{p.Key} = {p.Value}");
+                var providersBlock = $"{{ {string.Join(", ", pairs)} }}";
+                EmitAttribute(sb, "providers", providersBlock, metaPadding);
+            }
         }
 
         sb.Append('}');

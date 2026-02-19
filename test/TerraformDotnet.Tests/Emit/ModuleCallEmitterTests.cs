@@ -89,7 +89,7 @@ public class ModuleCallEmitterTests
         var emitter = new ModuleCallEmitter(call);
         var result = emitter.EmitModuleBlock();
 
-        Assert.Contains("source  = \"./modules/app\"", result);
+        Assert.Contains("source = \"./modules/app\"", result);
         Assert.Contains("project = var.project", result);
         Assert.Contains("region  = var.region", result);
         Assert.Contains("labels  = var.labels", result);
@@ -137,6 +137,34 @@ public class ModuleCallEmitterTests
         Assert.Contains("count      = var.worker_count", result);
         Assert.Contains("depends_on = [module.network, module.security]", result);
         Assert.Contains("providers  = { cloud = cloud.west }", result);
+    }
+
+    [Fact]
+    public void EmitModuleBlock_GroupsAlignedIndependently()
+    {
+        var call = new ModuleCallBuilder("svc")
+            .Source("git::https://example.com/modules/svc?ref=v1.0")
+            .Set("department", "var.department")
+            .Set("environment", "var.environment")
+            .Set("tags", "local.tags")
+            .Count("var.svc_count")
+            .DependsOn("module.network")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var result = emitter.EmitModuleBlock();
+
+        // Source group: only "source" → no padding
+        Assert.Contains("source = \"git::https://example.com/modules/svc?ref=v1.0\"", result);
+
+        // Args group: aligned to "environment" (11 chars)
+        Assert.Contains("department  = var.department", result);
+        Assert.Contains("environment = var.environment", result);
+        Assert.Contains("tags        = local.tags", result);
+
+        // Meta group: aligned to "depends_on" (10 chars)
+        Assert.Contains("count      = var.svc_count", result);
+        Assert.Contains("depends_on = [module.network]", result);
     }
 
     [Fact]
