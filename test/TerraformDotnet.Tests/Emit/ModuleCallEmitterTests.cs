@@ -275,6 +275,26 @@ public class ModuleCallEmitterTests
         Assert.Contains("variable \"anything\" {}", result);
     }
 
+    [Fact]
+    public void EmitVariableDeclarations_CompactSpacing_NoBlankLinesBetweenBlocks()
+    {
+        var module = SampleModule();
+
+        var call = new ModuleCallBuilder("app", module)
+            .Source("./modules/app")
+            .FillRequired(n => $"var.{n}")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var options = new VariableDeclarationOptions { CompactSpacing = true };
+        var result = emitter.EmitVariableDeclarations(options);
+
+        // Should not contain double newlines (blank lines between blocks)
+        Assert.DoesNotContain("\n\n", result);
+        Assert.Contains("variable \"project\" {}", result);
+        Assert.Contains("variable \"region\" {}", result);
+    }
+
     // ── EmitInputValues ─────────────────────────────────────────
 
     [Fact]
@@ -385,6 +405,61 @@ public class ModuleCallEmitterTests
             .ToList();
 
         Assert.Single(eqPositions);
+    }
+
+    [Fact]
+    public void EmitInputValues_CompactSpacing_NoBlankLinesBetweenValues()
+    {
+        var call = new ModuleCallBuilder("test")
+            .Source("./modules/test")
+            .Set("name", "var.name")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var values = new Dictionary<string, InputValue>
+        {
+            ["name"] = "\"my-project\"",
+            ["region"] = "\"us-west-2\"",
+            ["tier"] = "\"basic\"",
+        };
+
+        var result = emitter.EmitInputValues(values, compactSpacing: true);
+        var lines = result.Split('\n');
+
+        // No blank lines between assignments
+        for (int i = 0; i < lines.Length - 1; i++)
+        {
+            if (lines[i].Contains('='))
+            {
+                Assert.False(
+                    string.IsNullOrWhiteSpace(lines[i + 1]) && i + 2 < lines.Length && lines[i + 2].Contains('='),
+                    "Compact spacing should not have blank lines between values");
+            }
+        }
+
+        Assert.Contains("name", result);
+        Assert.Contains("region", result);
+        Assert.Contains("tier", result);
+    }
+
+    [Fact]
+    public void EmitInputValues_DefaultSpacing_HasBlankLinesBetweenValues()
+    {
+        var call = new ModuleCallBuilder("test")
+            .Source("./modules/test")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var values = new Dictionary<string, InputValue>
+        {
+            ["name"] = "\"a\"",
+            ["region"] = "\"b\"",
+        };
+
+        var result = emitter.EmitInputValues(values);
+
+        // Default has a blank line between entries
+        Assert.Contains("\"a\"\n\nregion", result);
     }
 
     // ── WriteTo ─────────────────────────────────────────────────

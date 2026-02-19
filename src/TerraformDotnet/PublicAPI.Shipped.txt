@@ -73,12 +73,14 @@ TerraformDotnet.Emit.ModuleCallBuilder.SetLiteral(string! name, string! value) -
 TerraformDotnet.Emit.ModuleCallBuilder.Source(string! source) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.Version(string! version) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallEmitter
-TerraformDotnet.Emit.ModuleCallEmitter.EmitInputValues(System.Collections.Generic.IDictionary<string!, TerraformDotnet.Emit.InputValue!>! values, bool includeQualifierComments = true) -> string!
+TerraformDotnet.Emit.ModuleCallEmitter.EmitInputValues(System.Collections.Generic.IDictionary<string!, TerraformDotnet.Emit.InputValue!>! values, bool includeQualifierComments = true, bool compactSpacing = false) -> string!
 TerraformDotnet.Emit.ModuleCallEmitter.EmitModuleBlock() -> string!
 TerraformDotnet.Emit.ModuleCallEmitter.EmitVariableDeclarations(TerraformDotnet.Emit.VariableDeclarationOptions? options = null) -> string!
 TerraformDotnet.Emit.ModuleCallEmitter.ModuleCallEmitter(TerraformDotnet.Emit.ModuleCall! call) -> void
 TerraformDotnet.Emit.ModuleCallEmitter.WriteTo(string! directoryPath, TerraformDotnet.Emit.FileEmitterOptions! options) -> void
 TerraformDotnet.Emit.VariableDeclarationOptions
+TerraformDotnet.Emit.VariableDeclarationOptions.CompactSpacing.get -> bool
+TerraformDotnet.Emit.VariableDeclarationOptions.CompactSpacing.init -> void
 TerraformDotnet.Emit.VariableDeclarationOptions.ExcludeVariables.get -> System.Collections.Generic.ISet<string!>!
 TerraformDotnet.Emit.VariableDeclarationOptions.ExcludeVariables.init -> void
 TerraformDotnet.Emit.VariableDeclarationOptions.IncludeDefault.get -> bool
