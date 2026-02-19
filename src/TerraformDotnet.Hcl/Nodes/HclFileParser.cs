@@ -87,6 +87,7 @@ public static class HclFileParser
         {
             body.Start = _reader.TokenStart;
             var seenAttributes = new HashSet<string>();
+            int previousEndLine = -1;
 
             while (true)
             {
@@ -103,11 +104,31 @@ public static class HclFileParser
                                 attr.Start);
                         }
 
+                        if (previousEndLine >= 0)
+                        {
+                            int effectiveStart = attr.LeadingComments.Count > 0
+                                ? attr.LeadingComments[0].Start.Line
+                                : attr.Start.Line;
+                            attr.HasLeadingBlankLine = effectiveStart - previousEndLine > 1;
+                        }
+
+                        previousEndLine = attr.End.Line;
                         body.Attributes.Add(attr);
                         break;
 
                     case HclTokenType.BlockType:
-                        body.Blocks.Add(ParseBlock());
+                        var block = ParseBlock();
+
+                        if (previousEndLine >= 0)
+                        {
+                            int effectiveStart = block.LeadingComments.Count > 0
+                                ? block.LeadingComments[0].Start.Line
+                                : block.Start.Line;
+                            block.HasLeadingBlankLine = effectiveStart - previousEndLine > 1;
+                        }
+
+                        previousEndLine = block.End.Line;
+                        body.Blocks.Add(block);
                         break;
 
                     case HclTokenType.BlockEnd:

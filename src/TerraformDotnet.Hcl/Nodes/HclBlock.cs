@@ -31,6 +31,8 @@ public sealed class HclBlock : HclNode
             End = End,
         };
 
+        clone.HasLeadingBlankLine = HasLeadingBlankLine;
+
         foreach (string label in Labels)
         {
             clone.Labels.Add(label);
