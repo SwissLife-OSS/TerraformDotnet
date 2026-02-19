@@ -243,8 +243,11 @@ public sealed class ModuleCallEmitter
         var sb = new StringBuilder();
         var variableLookup = BuildVariableLookup();
 
-        // Compute alignment for all value names
-        var padding = Utf8HclWriter.AlignAttributes(values.Keys.ToList());
+        // When compact, all values form one group → align globally.
+        // When not compact, blank lines separate each value into its own group → no padding needed.
+        var padding = compactSpacing
+            ? Utf8HclWriter.AlignAttributes(values.Keys.ToList())
+            : new Dictionary<string, int>();
         var first = true;
 
         foreach (var kvp in values)

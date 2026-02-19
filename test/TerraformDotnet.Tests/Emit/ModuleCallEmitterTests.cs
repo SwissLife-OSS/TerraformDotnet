@@ -342,7 +342,8 @@ public class ModuleCallEmitterTests
 
         var result = emitter.EmitInputValues(values);
 
-        Assert.Contains("name   = \"my-project\"", result);
+        // Default spacing: each value is its own group → no extra padding
+        Assert.Contains("name = \"my-project\"", result);
         Assert.Contains("region = \"us-west-2\"", result);
     }
 
@@ -422,7 +423,8 @@ public class ModuleCallEmitterTests
             ["long_name"] = "2",
         };
 
-        var result = emitter.EmitInputValues(values);
+        // Compact: all values form one group → '=' aligned to longest name
+        var result = emitter.EmitInputValues(values, compactSpacing: true);
         var lines = result.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
         // Both '=' signs should be at the same column
@@ -468,6 +470,11 @@ public class ModuleCallEmitterTests
         Assert.Contains("name", result);
         Assert.Contains("region", result);
         Assert.Contains("tier", result);
+
+        // Compact: all values form one group → aligned to longest name ("region")
+        Assert.Contains("name   = \"my-project\"", result);
+        Assert.Contains("region = \"us-west-2\"", result);
+        Assert.Contains("tier   = \"basic\"", result);
     }
 
     [Fact]
@@ -488,6 +495,10 @@ public class ModuleCallEmitterTests
 
         // Default has a blank line between entries
         Assert.Contains("\"a\"\n\nregion", result);
+
+        // Each value is its own group → no extra padding
+        Assert.Contains("name = \"a\"", result);
+        Assert.Contains("region = \"b\"", result);
     }
 
     // ── WriteTo ─────────────────────────────────────────────────
