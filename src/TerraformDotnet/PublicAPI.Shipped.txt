@@ -61,6 +61,7 @@ TerraformDotnet.Emit.ModuleCallBuilder.Build() -> TerraformDotnet.Emit.ModuleCal
 TerraformDotnet.Emit.ModuleCallBuilder.Count(string! hclExpression) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.DependsOn(params string![]! dependencies) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.FillRequired(System.Func<string!, string!>! expressionFactory) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.FillSentinel(string! sentinel, System.Func<string!, string!>! expressionFactory) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.ForEach(string! hclExpression) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.IncludeOptionalComments(bool include) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.ModuleCallBuilder(string! moduleName) -> void
@@ -107,6 +108,7 @@ TerraformDotnet.Module.TerraformModule.Outputs.get -> System.Collections.Generic
 TerraformDotnet.Module.TerraformModule.ProviderRequirements.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformProviderRequirement!>!
 TerraformDotnet.Module.TerraformModule.RequiredTerraformVersion.get -> string?
 TerraformDotnet.Module.TerraformModule.RequiredVariables.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
+TerraformDotnet.Module.TerraformModule.GetSentinelVariables(string! sentinel) -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
 TerraformDotnet.Module.TerraformModule.Resources.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformResource!>!
 TerraformDotnet.Module.TerraformModule.Variables.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
 TerraformDotnet.Module.TerraformOutput
@@ -136,6 +138,7 @@ TerraformDotnet.Module.TerraformVariable.Description.get -> string?
 TerraformDotnet.Module.TerraformVariable.IsNullable.get -> bool
 TerraformDotnet.Module.TerraformVariable.IsOptional.get -> bool
 TerraformDotnet.Module.TerraformVariable.IsRequired.get -> bool
+TerraformDotnet.Module.TerraformVariable.HasSentinelDefault(string! sentinel) -> bool
 TerraformDotnet.Module.TerraformVariable.IsSensitive.get -> bool
 TerraformDotnet.Module.TerraformVariable.Name.get -> string!
 TerraformDotnet.Module.TerraformVariable.Type.get -> TerraformDotnet.Types.TerraformType?

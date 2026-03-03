@@ -20,6 +20,7 @@ Load Terraform modules, inspect their structure, and generate module calling cod
   - [Basic usage](#basic-usage)
   - [Setting variables](#setting-variables)
   - [Auto-filling required variables](#auto-filling-required-variables)
+  - [Sentinel default variables](#sentinel-default-variables)
   - [Optional variable comments](#optional-variable-comments)
   - [Meta-arguments](#meta-arguments)
   - [Validation](#validation)
@@ -138,6 +139,7 @@ Variable properties:
 | `Default` | `HclExpression?` | Default value expression (`null` = required) |
 | `IsRequired` | `bool` | `true` when no default |
 | `IsOptional` | `bool` | `true` when default is set |
+| `HasSentinelDefault(sentinel)` | `bool` | `true` when default is a string matching the sentinel |
 | `IsSensitive` | `bool` | Marks sensitive values |
 | `IsNullable` | `bool` | Whether `null` is allowed |
 | `Validation` | `TerraformValidation?` | Validation rule with condition and error message |
@@ -329,6 +331,45 @@ var call = new ModuleCallBuilder("my-app", module)
     .FillRequired(name => $"var.{name}") // Fill the rest
     .Build();
 ```
+
+### Sentinel default variables
+
+Some modules use a sentinel default value (e.g. `"inject-at-runtime"`) for variables whose real values are supplied externally — typically via `TF_VAR_*` environment variables set by a CI/CD pipeline or secrets manager. These variables are technically optional (they have a default), but the sentinel is not a real value.
+
+`FillSentinel` treats these like required variables: it adds them to the module call arguments and also tracks them so `EmitInputValues` can render them as commented-out `.tfvars` entries:
+
+```csharp
+var module = TerraformModule.LoadFromDirectory("./modules/app");
+
+// Discover which variables use the sentinel convention
+foreach (var v in module.GetSentinelVariables("inject-at-runtime"))
+{
+    Console.WriteLine($"{v.Name} is supplied externally");
+}
+
+// Build the call — sentinel vars are wired up and tracked
+var call = new ModuleCallBuilder("my-app", module)
+    .Source("git::https://example.com/modules/app?ref=v2.0")
+    .FillRequired(name => $"var.{name}")
+    .FillSentinel("inject-at-runtime", name => $"var.{name}")
+    .Build();
+```
+
+`FillSentinel` skips variables already set (just like `FillRequired`), and sentinel variables are excluded from `IncludeOptionalComments` since they are already in the arguments.
+
+In the emitted `.tfvars`, sentinel variables appear as commented-out entries with their description:
+
+```hcl
+# (Required) Project name.
+project = "my-app"
+
+# The service token.
+# service_token = ""
+# The access key.
+# access_key    = ""
+```
+
+This makes it clear that these variables exist and are expected to be supplied externally.
 
 ### Optional variable comments
 

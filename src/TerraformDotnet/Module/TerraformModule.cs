@@ -47,6 +47,24 @@ public sealed class TerraformModule
     public IReadOnlyList<TerraformVariable> OptionalVariables =>
         _optionalVariables ??= Variables.Where(v => v.IsOptional).ToList();
 
+    /// <summary>
+    /// Returns optional variables whose default value equals the given sentinel string.
+    /// These are variables that technically have a default but are expected to be supplied
+    /// externally (e.g. by a CI/CD pipeline via <c>TF_VAR_*</c> environment variables).
+    /// <example>
+    /// <code>
+    /// var sentinelVars = module.GetSentinelVariables("inject-at-runtime");
+    /// foreach (var v in sentinelVars)
+    /// {
+    ///     Console.WriteLine($"{v.Name} is supplied externally");
+    /// }
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <param name="sentinel">The sentinel default value to match.</param>
+    public IReadOnlyList<TerraformVariable> GetSentinelVariables(string sentinel) =>
+        OptionalVariables.Where(v => v.HasSentinelDefault(sentinel)).ToList();
+
     /// <summary>All output declarations in the module.</summary>
     public IReadOnlyList<TerraformOutput> Outputs { get; }
 

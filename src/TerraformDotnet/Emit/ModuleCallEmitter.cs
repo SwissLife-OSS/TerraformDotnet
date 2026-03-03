@@ -294,6 +294,33 @@ public sealed class ModuleCallEmitter
             sb.AppendLine(line);
         }
 
+        // Commented sentinel variables (injected externally, e.g. by a CI/CD pipeline)
+        if (_call.CommentedInputVariables.Count > 0)
+        {
+            if (values.Count > 0)
+            {
+                sb.AppendLine();
+            }
+
+            var commentedNames = _call.CommentedInputVariables
+                .Select(c => c.Name)
+                .ToList();
+            var commentedPadding = Utf8HclWriter.AlignAttributes(commentedNames);
+
+            foreach (var commented in _call.CommentedInputVariables)
+            {
+                if (commented.Description is not null)
+                {
+                    sb.AppendLine($"# {commented.Description}");
+                }
+
+                var namePad = commentedPadding.TryGetValue(commented.Name, out var cp)
+                    ? new string(' ', cp)
+                    : "";
+                sb.AppendLine($"# {commented.Name}{namePad} = {commented.SuggestedExpression}");
+            }
+        }
+
         return sb.ToString();
     }
 

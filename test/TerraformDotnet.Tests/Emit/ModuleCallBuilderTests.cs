@@ -304,4 +304,155 @@ public class ModuleCallBuilderTests
         Assert.Throws<InvalidOperationException>(() =>
             builder.FillRequired(n => $"var.{n}"));
     }
+
+    // ── FillSentinel ────────────────────────────────────────────
+
+    [Fact]
+    public void FillSentinel_AddsSentinelVariablesToArguments()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("test", module)
+            .Source("./modules/test")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        Assert.Equal("var.project", call.Arguments["project"]);
+        Assert.Equal("var.api_key", call.Arguments["api_key"]);
+        Assert.Equal("var.secret", call.Arguments["secret"]);
+        Assert.Equal(5, call.Arguments.Count);
+    }
+
+    [Fact]
+    public void FillSentinel_SkipsAlreadySetVariables()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("test", module)
+            .Source("./modules/test")
+            .FillRequired(n => $"var.{n}")
+            .SetLiteral("api_key", "custom-value")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        Assert.Equal("\"custom-value\"", call.Arguments["api_key"]);
+        Assert.Equal("var.secret", call.Arguments["secret"]);
+    }
+
+    [Fact]
+    public void FillSentinel_DoesNotAffectNonSentinelOptionals()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("test", module)
+            .Source("./modules/test")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        // "tier" has default "standard" → not a sentinel, so not in arguments
+        Assert.False(call.Arguments.ContainsKey("tier"));
+    }
+
+    [Fact]
+    public void FillSentinel_TracksCommentedInputVariables()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("test", module)
+            .Source("./modules/test")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        Assert.Equal(2, call.CommentedInputVariables.Count);
+        Assert.Contains(call.CommentedInputVariables, c => c.Name == "api_key");
+        Assert.Contains(call.CommentedInputVariables, c => c.Name == "secret");
+
+        var apiKey = call.CommentedInputVariables.First(c => c.Name == "api_key");
+        Assert.Equal("The API key.", apiKey.Description);
+        Assert.Equal("\"\"", apiKey.SuggestedExpression);
+    }
+
+    [Fact]
+    public void FillSentinel_ExcludesSentinelFromCommentedOptionals()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("test", module)
+            .Source("./modules/test")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .IncludeOptionalComments(true)
+            .Build();
+
+        // Sentinel vars are in arguments, so they shouldn't be in commented optionals
+        Assert.DoesNotContain(call.CommentedOptionalVariables, c => c.Name == "api_key");
+        Assert.DoesNotContain(call.CommentedOptionalVariables, c => c.Name == "secret");
+        // Only "tier" should be in commented optionals
+        Assert.Single(call.CommentedOptionalVariables);
+        Assert.Equal("tier", call.CommentedOptionalVariables[0].Name);
+    }
+
+    [Fact]
+    public void FillSentinel_WithoutModule_Throws()
+    {
+        var builder = new ModuleCallBuilder("test")
+            .Source("./modules/test");
+
+        Assert.Throws<InvalidOperationException>(() =>
+            builder.FillSentinel("pipeline-injected", n => $"var.{n}"));
+    }
+
+    [Fact]
+    public void FillSentinel_NoSentinelVars_NoEffect()
+    {
+        var module = SampleModule();
+
+        var call = new ModuleCallBuilder("test", module)
+            .Source("./modules/test")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        // Only the 3 required vars should be set
+        Assert.Equal(3, call.Arguments.Count);
+        Assert.Empty(call.CommentedInputVariables);
+    }
+
+    private static TerraformModule SentinelModule() => ParseModule("""
+        variable "project" {
+          type        = string
+          description = "Project name."
+        }
+
+        variable "region" {
+          type        = string
+          description = "Deployment region."
+        }
+
+        variable "labels" {
+          type        = map(string)
+          description = "Resource labels."
+        }
+
+        variable "api_key" {
+          type        = string
+          description = "The API key."
+          default     = "pipeline-injected"
+        }
+
+        variable "secret" {
+          type        = string
+          description = "The secret."
+          default     = "pipeline-injected"
+        }
+
+        variable "tier" {
+          type        = string
+          description = "The service tier."
+          default     = "standard"
+        }
+        """);
 }

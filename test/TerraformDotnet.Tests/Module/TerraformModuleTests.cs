@@ -8,6 +8,56 @@ public class TerraformModuleTests
     private static TerraformModule Parse(string hcl) =>
         TerraformModule.LoadFromContent(Encoding.UTF8.GetBytes(hcl));
 
+    // ── GetSentinelVariables ────────────────────────────────────
+
+    [Fact]
+    public void GetSentinelVariables_ReturnsSentinelVarsOnly()
+    {
+        var module = Parse("""
+            variable "project" {
+              type = string
+            }
+
+            variable "api_key" {
+              type    = string
+              default = "pipeline-injected"
+            }
+
+            variable "tier" {
+              type    = string
+              default = "standard"
+            }
+
+            variable "secret" {
+              type    = string
+              default = "pipeline-injected"
+            }
+            """);
+
+        var sentinel = module.GetSentinelVariables("pipeline-injected");
+        Assert.Equal(2, sentinel.Count);
+        Assert.Contains(sentinel, v => v.Name == "api_key");
+        Assert.Contains(sentinel, v => v.Name == "secret");
+    }
+
+    [Fact]
+    public void GetSentinelVariables_NoMatches_ReturnsEmpty()
+    {
+        var module = Parse("""
+            variable "name" {
+              type = string
+            }
+
+            variable "tier" {
+              type    = string
+              default = "standard"
+            }
+            """);
+
+        var sentinel = module.GetSentinelVariables("pipeline-injected");
+        Assert.Empty(sentinel);
+    }
+
     [Fact]
     public void LoadFromContent_SingleFile()
     {

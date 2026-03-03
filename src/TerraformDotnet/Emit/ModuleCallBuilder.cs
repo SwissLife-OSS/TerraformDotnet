@@ -21,6 +21,7 @@ public sealed class ModuleCallBuilder
     private readonly string _name;
     private readonly TerraformModule? _module;
     private readonly Dictionary<string, string> _arguments = new();
+    private readonly HashSet<string> _sentinelVariableNames = [];
     private string? _source;
     private string? _version;
     private string? _count;
@@ -138,6 +139,43 @@ public sealed class ModuleCallBuilder
         return this;
     }
 
+    /// <summary>
+    /// Auto-fills variables whose default matches a sentinel value.
+    /// These variables are technically optional (they have a default) but are expected
+    /// to be supplied externally — for example, via <c>TF_VAR_*</c> environment variables
+    /// set by a CI/CD pipeline. Sentinel variables are added to the module call arguments
+    /// and tracked so that <see cref="ModuleCallEmitter.EmitInputValues"/> renders them
+    /// as commented-out entries, indicating they are injected externally.
+    /// <example>
+    /// <code>
+    /// // Given a module with: variable "service_token" { default = "inject-at-runtime" }
+    /// builder.FillSentinel("inject-at-runtime", name => $"var.{name}");
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <param name="sentinel">The sentinel default value to match (e.g. <c>"inject-at-runtime"</c>).</param>
+    /// <param name="expressionFactory">A function that generates the HCL expression from a variable name.</param>
+    /// <exception cref="InvalidOperationException">When the builder was created without a module.</exception>
+    public ModuleCallBuilder FillSentinel(string sentinel, Func<string, string> expressionFactory)
+    {
+        if (_module is null)
+        {
+            throw new InvalidOperationException(
+                "FillSentinel requires a TerraformModule. Use the constructor that accepts a module.");
+        }
+
+        foreach (var variable in _module.GetSentinelVariables(sentinel))
+        {
+            if (!_arguments.ContainsKey(variable.Name))
+            {
+                _arguments[variable.Name] = expressionFactory(variable.Name);
+                _sentinelVariableNames.Add(variable.Name);
+            }
+        }
+
+        return this;
+    }
+
     /// <summary>Sets the <c>count</c> meta-argument.</summary>
     /// <param name="hclExpression">The count expression.</param>
     public ModuleCallBuilder Count(string hclExpression)
@@ -215,6 +253,7 @@ public sealed class ModuleCallBuilder
         }
 
         var commentedOptionals = BuildCommentedOptionals();
+        var commentedInputVariables = BuildCommentedInputVariables();
 
         return new ModuleCall(
             _name,
@@ -222,6 +261,7 @@ public sealed class ModuleCallBuilder
             _version,
             new Dictionary<string, string>(_arguments),
             commentedOptionals,
+            commentedInputVariables,
             _module,
             _count,
             _forEach,
@@ -246,6 +286,29 @@ public sealed class ModuleCallBuilder
                     variable.Name,
                     variable.Description,
                     $"var.{variable.Name}"));
+            }
+        }
+
+        return commented;
+    }
+
+    private List<CommentedVariable> BuildCommentedInputVariables()
+    {
+        if (_sentinelVariableNames.Count == 0 || _module is null)
+        {
+            return [];
+        }
+
+        var commented = new List<CommentedVariable>();
+
+        foreach (var variable in _module.Variables)
+        {
+            if (_sentinelVariableNames.Contains(variable.Name))
+            {
+                commented.Add(new CommentedVariable(
+                    variable.Name,
+                    variable.Description,
+                    "\"\""));
             }
         }
 
