@@ -14,6 +14,7 @@ public sealed class ModuleCall
         string? version,
         IReadOnlyDictionary<string, string> arguments,
         IReadOnlyList<CommentedVariable> commentedOptionalVariables,
+        IReadOnlyList<CommentedVariable> commentedInputVariables,
         TerraformModule? sourceModule,
         string? count,
         string? forEach,
@@ -25,6 +26,7 @@ public sealed class ModuleCall
         Version = version;
         Arguments = arguments;
         CommentedOptionalVariables = commentedOptionalVariables;
+        CommentedInputVariables = commentedInputVariables;
         SourceModule = sourceModule;
         Count = count;
         ForEach = forEach;
@@ -46,6 +48,9 @@ public sealed class ModuleCall
 
     /// <summary>Gets the optional variables rendered as comments.</summary>
     internal IReadOnlyList<CommentedVariable> CommentedOptionalVariables { get; }
+
+    /// <summary>Gets sentinel variables rendered as commented-out entries in the emitted <c>.tfvars</c> file.</summary>
+    internal IReadOnlyList<CommentedVariable> CommentedInputVariables { get; }
 
     /// <summary>Gets the source module used for validation and metadata, if any.</summary>
     public TerraformModule? SourceModule { get; }

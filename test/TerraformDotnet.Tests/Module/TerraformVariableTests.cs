@@ -252,4 +252,105 @@ public class TerraformVariableTests
         var innerObj = Assert.IsType<TerraformObjectType>(collType.Element);
         Assert.Equal(3, innerObj.Fields.Count);
     }
+
+    // ── HasSentinelDefault ───────────────────────────────────────
+
+    [Fact]
+    public void HasSentinelDefault_MatchingSentinel_ReturnsTrue()
+    {
+        var module = Parse("""
+            variable "api_key" {
+              type    = string
+              default = "pipeline-injected"
+            }
+            """);
+
+        var v = Assert.Single(module.Variables);
+        Assert.True(v.HasSentinelDefault("pipeline-injected"));
+    }
+
+    [Fact]
+    public void HasSentinelDefault_DifferentDefault_ReturnsFalse()
+    {
+        var module = Parse("""
+            variable "tier" {
+              type    = string
+              default = "standard"
+            }
+            """);
+
+        var v = Assert.Single(module.Variables);
+        Assert.False(v.HasSentinelDefault("pipeline-injected"));
+    }
+
+    [Fact]
+    public void HasSentinelDefault_NoDefault_ReturnsFalse()
+    {
+        var module = Parse("""
+            variable "name" {
+              type = string
+            }
+            """);
+
+        var v = Assert.Single(module.Variables);
+        Assert.False(v.HasSentinelDefault("pipeline-injected"));
+    }
+
+    [Fact]
+    public void HasSentinelDefault_NumericDefault_ReturnsFalse()
+    {
+        var module = Parse("""
+            variable "count" {
+              type    = number
+              default = 5
+            }
+            """);
+
+        var v = Assert.Single(module.Variables);
+        Assert.False(v.HasSentinelDefault("5"));
+    }
+
+    [Fact]
+    public void HasSentinelDefault_BoolDefault_ReturnsFalse()
+    {
+        var module = Parse("""
+            variable "enabled" {
+              type    = bool
+              default = false
+            }
+            """);
+
+        var v = Assert.Single(module.Variables);
+        Assert.False(v.HasSentinelDefault("false"));
+    }
+
+    [Fact]
+    public void HasSentinelDefault_EmptyStringDefault_MatchesEmptySentinel()
+    {
+        var module = Parse("""
+            variable "label" {
+              type    = string
+              default = ""
+            }
+            """);
+
+        var v = Assert.Single(module.Variables);
+        Assert.True(v.HasSentinelDefault(""));
+        Assert.False(v.HasSentinelDefault("pipeline-injected"));
+    }
+
+    [Fact]
+    public void HasSentinelDefault_IsCaseSensitive()
+    {
+        var module = Parse("""
+            variable "key" {
+              type    = string
+              default = "Pipeline-Injected"
+            }
+            """);
+
+        var v = Assert.Single(module.Variables);
+        Assert.False(v.HasSentinelDefault("pipeline-injected"));
+        Assert.True(v.HasSentinelDefault("Pipeline-Injected"));
+    }
 }

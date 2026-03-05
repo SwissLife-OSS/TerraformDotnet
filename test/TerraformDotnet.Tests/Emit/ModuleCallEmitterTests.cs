@@ -696,4 +696,159 @@ public class ModuleCallEmitterTests
         Assert.Contains("description = \"The name of the project.\"", result);
         Assert.Contains("type = map(string)", result);
     }
+
+    // ── EmitInputValues — Sentinel Variables ────────────────────
+
+    [Fact]
+    public void EmitInputValues_WithSentinelVariables_AppendsCommentedEntries()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("app", module)
+            .Source("./modules/app")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var values = new Dictionary<string, InputValue>
+        {
+            ["project"] = "\"my-app\"",
+            ["region"] = "\"eu-west-1\"",
+        };
+
+        var result = emitter.EmitInputValues(values);
+
+        // Regular values should be present
+        Assert.Contains("project = \"my-app\"", result);
+        Assert.Contains("region = \"eu-west-1\"", result);
+
+        // Sentinel vars should appear as comments at the end
+        Assert.Contains("# The API key.", result);
+        Assert.Contains("# api_key", result);
+        Assert.Contains("# The secret.", result);
+        Assert.Contains("# secret", result);
+    }
+
+    [Fact]
+    public void EmitInputValues_SentinelVariables_AlignedComments()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("app", module)
+            .Source("./modules/app")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var values = new Dictionary<string, InputValue>
+        {
+            ["project"] = "\"my-app\"",
+        };
+
+        var result = emitter.EmitInputValues(values);
+        var lines = result.Split('\n');
+
+        // Find the commented-out assignment lines (not description lines)
+        var commentedAssignments = lines
+            .Where(l => l.StartsWith("# ") && l.Contains(" = "))
+            .Where(l => !l.StartsWith("# ("))    // exclude description lines
+            .Where(l => !l.StartsWith("# The ")) // exclude description lines
+            .ToList();
+
+        Assert.Equal(2, commentedAssignments.Count);
+
+        // Both '=' should be at the same column (aligned)
+        var eqPositions = commentedAssignments
+            .Select(l => l.IndexOf('='))
+            .Distinct()
+            .ToList();
+
+        Assert.Single(eqPositions);
+    }
+
+    [Fact]
+    public void EmitInputValues_NoSentinelVariables_NoCommentedSection()
+    {
+        var module = SampleModule();
+
+        var call = new ModuleCallBuilder("app", module)
+            .Source("./modules/app")
+            .FillRequired(n => $"var.{n}")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var values = new Dictionary<string, InputValue>
+        {
+            ["project"] = "\"my-app\"",
+        };
+
+        var result = emitter.EmitInputValues(values);
+
+        // No sentinel section — count comment lines
+        var commentLines = result.Split('\n')
+            .Count(l => l.StartsWith("# "));
+
+        // Only the description comment for project
+        Assert.Equal(1, commentLines);
+    }
+
+    [Fact]
+    public void EmitInputValues_SentinelVars_BlankLineSeparation()
+    {
+        var module = SentinelModule();
+
+        var call = new ModuleCallBuilder("app", module)
+            .Source("./modules/app")
+            .FillRequired(n => $"var.{n}")
+            .FillSentinel("pipeline-injected", n => $"var.{n}")
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var values = new Dictionary<string, InputValue>
+        {
+            ["project"] = "\"my-app\"",
+        };
+
+        var result = emitter.EmitInputValues(values);
+
+        // Should have a blank line between the values section and the sentinel comments
+        Assert.Contains("\"my-app\"\n\n#", result);
+    }
+
+    private static TerraformModule SentinelModule() => ParseModule("""
+        variable "project" {
+          type        = string
+          description = "Project name."
+        }
+
+        variable "region" {
+          type        = string
+          description = "Deployment region."
+        }
+
+        variable "labels" {
+          type        = map(string)
+          description = "Resource labels."
+        }
+
+        variable "api_key" {
+          type        = string
+          description = "The API key."
+          default     = "pipeline-injected"
+        }
+
+        variable "secret" {
+          type        = string
+          description = "The secret."
+          default     = "pipeline-injected"
+        }
+
+        variable "tier" {
+          type        = string
+          description = "The service tier."
+          default     = "standard"
+        }
+        """);
 }
