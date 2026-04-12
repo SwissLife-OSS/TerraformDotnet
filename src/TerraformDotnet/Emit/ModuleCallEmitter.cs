@@ -364,7 +364,35 @@ public sealed class ModuleCallEmitter
             ? new string(' ', p)
             : "";
 
-        sb.AppendLine($"  {name}{namePad} = {value}");
+        if (!value.Contains('\n'))
+        {
+            sb.AppendLine($"  {name}{namePad} = {value}");
+
+            return;
+        }
+
+        // Multi-line value: indent continuation lines to align under the first value character.
+        // The prefix is "  {name}{namePad} = " — continuation lines are shifted by that amount
+        // while preserving their relative indentation.
+        int prefixLength = 2 + name.Length + namePad.Length + 3; // "  " + name + pad + " = "
+        var indent = new string(' ', prefixLength);
+        var lines = value.Split('\n');
+
+        sb.Append($"  {name}{namePad} = {lines[0]}");
+        sb.AppendLine();
+
+        for (int i = 1; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i]))
+            {
+                sb.AppendLine();
+            }
+            else
+            {
+                sb.Append(indent);
+                sb.AppendLine(lines[i]);
+            }
+        }
     }
 
     private Dictionary<string, TerraformVariable> BuildVariableLookup()
@@ -399,9 +427,24 @@ public sealed class ModuleCallEmitter
     }
 
     /// <summary>
-    /// Emits an HCL expression back to string form using the HCL writer.
+    /// Emits an <see cref="HclExpression"/> AST node to a canonical HCL string.
+    /// Uses the same <see cref="HclFileEmitter"/> pipeline,
+    /// producing correctly indented output.
+    /// <example>
+    /// <code>
+    /// var expr = new HclFunctionCallExpression
+    /// {
+    ///     Name = "flatten",
+    ///     Arguments = { new HclTupleExpression() }
+    /// };
+    /// string hcl = ModuleCallEmitter.EmitExpression(expr);
+    /// // "flatten([])"
+    /// </code>
+    /// </example>
     /// </summary>
-    private static string EmitExpression(HclExpression expression)
+    /// <param name="expression">The HCL expression AST node to emit.</param>
+    /// <returns>The emitted HCL string.</returns>
+    public static string EmitExpression(HclExpression expression)
     {
         using var stream = new MemoryStream();
         using var writer = new Utf8HclWriter(stream);

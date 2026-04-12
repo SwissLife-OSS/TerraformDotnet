@@ -1,5 +1,6 @@
 using System.Text;
 using TerraformDotnet.Emit;
+using TerraformDotnet.Hcl.Nodes;
 using TerraformDotnet.Module;
 
 namespace TerraformDotnet.Tests.Emit;
@@ -851,4 +852,213 @@ public class ModuleCallEmitterTests
           default     = "standard"
         }
         """);
+
+    // ── EmitExpression ──────────────────────────────────────────
+
+    [Fact]
+    public void EmitExpression_VariableReference()
+    {
+        var expr = new HclAttributeAccessExpression
+        {
+            Source = new HclVariableExpression { Name = "var" },
+            Name = "project",
+        };
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Equal("var.project", result);
+    }
+
+    [Fact]
+    public void EmitExpression_FunctionCall()
+    {
+        var expr = new HclFunctionCallExpression { Name = "flatten" };
+        expr.Arguments.Add(new HclTupleExpression());
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Equal("flatten([])", result);
+    }
+
+    [Fact]
+    public void EmitExpression_LiteralString()
+    {
+        var expr = new HclLiteralExpression
+        {
+            Value = "hello",
+            Kind = HclLiteralKind.String,
+        };
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Equal("\"hello\"", result);
+    }
+
+    [Fact]
+    public void EmitExpression_LiteralNumber()
+    {
+        var expr = new HclLiteralExpression
+        {
+            Value = "42",
+            Kind = HclLiteralKind.Number,
+        };
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Equal("42", result);
+    }
+
+    [Fact]
+    public void EmitExpression_LiteralBool()
+    {
+        var expr = new HclLiteralExpression
+        {
+            Value = "true",
+            Kind = HclLiteralKind.Bool,
+        };
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Equal("true", result);
+    }
+
+    [Fact]
+    public void EmitExpression_NullLiteral()
+    {
+        var expr = new HclLiteralExpression
+        {
+            Value = null,
+            Kind = HclLiteralKind.Null,
+        };
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Equal("null", result);
+    }
+
+    [Fact]
+    public void EmitExpression_SimpleObject()
+    {
+        var expr = new HclObjectExpression();
+        expr.Elements.Add(new HclObjectElement
+        {
+            Key = new HclLiteralExpression { Value = "name", Kind = HclLiteralKind.String },
+            Value = new HclLiteralExpression { Value = "test", Kind = HclLiteralKind.String },
+        });
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Contains("name", result);
+        Assert.Contains("\"test\"", result);
+    }
+
+    [Fact]
+    public void EmitExpression_Tuple()
+    {
+        var expr = new HclTupleExpression();
+        expr.Elements.Add(new HclLiteralExpression { Value = "a", Kind = HclLiteralKind.String });
+        expr.Elements.Add(new HclLiteralExpression { Value = "b", Kind = HclLiteralKind.String });
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Equal("[\"a\", \"b\"]", result);
+    }
+
+    [Fact]
+    public void EmitExpression_ForExpression()
+    {
+        var expr = new HclForExpression
+        {
+            KeyVariable = "k",
+            ValueVariable = "v",
+            Collection = new HclAttributeAccessExpression
+            {
+                Source = new HclVariableExpression { Name = "var" },
+                Name = "items",
+            },
+            ValueExpression = new HclVariableExpression { Name = "v" },
+            IsObjectFor = false,
+        };
+
+        var result = ModuleCallEmitter.EmitExpression(expr);
+
+        Assert.Contains("for k, v in var.items", result);
+    }
+
+    // ── EmitModuleBlock with multi-line values ──────────────────
+
+    [Fact]
+    public void EmitModuleBlock_MultiLineValue_IndentsContinuationLines()
+    {
+        // Build a call with a multi-line HclExpression (tuple of objects)
+        var obj = new HclObjectExpression();
+        obj.Elements.Add(new HclObjectElement
+        {
+            Key = new HclLiteralExpression { Value = "name", Kind = HclLiteralKind.String },
+            Value = new HclLiteralExpression { Value = "web", Kind = HclLiteralKind.String },
+        });
+        obj.Elements.Add(new HclObjectElement
+        {
+            Key = new HclLiteralExpression { Value = "port", Kind = HclLiteralKind.String },
+            Value = new HclLiteralExpression { Value = "8080", Kind = HclLiteralKind.Number },
+        });
+
+        var tupleExpr = new HclTupleExpression();
+        tupleExpr.Elements.Add(obj);
+
+        var call = new ModuleCallBuilder("svc")
+            .Source("./modules/svc")
+            .Set("containers", tupleExpr)
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var result = emitter.EmitModuleBlock();
+
+        // The multi-line value should be properly indented inside the module block
+        Assert.Contains("containers = [", result);
+
+        // Continuation lines should be indented (not left-aligned)
+        var lines = result.Split('\n');
+        var containersIndex = Array.FindIndex(lines, l => l.Contains("containers = ["));
+        Assert.True(containersIndex >= 0, "containers line not found");
+
+        // Lines after "containers = [" should be indented
+        if (containersIndex + 1 < lines.Length)
+        {
+            var nextLine = lines[containersIndex + 1];
+            Assert.StartsWith(" ", nextLine);
+        }
+    }
+
+    [Fact]
+    public void EmitModuleBlock_MultiLineForExpression_IndentsContinuationLines()
+    {
+        // for-expression that produces a tuple
+        var forExpr = new HclForExpression
+        {
+            KeyVariable = "item",
+            Collection = new HclAttributeAccessExpression
+            {
+                Source = new HclVariableExpression { Name = "var" },
+                Name = "items",
+            },
+            ValueExpression = new HclAttributeAccessExpression
+            {
+                Source = new HclVariableExpression { Name = "item" },
+                Name = "name",
+            },
+            IsObjectFor = false,
+        };
+
+        var call = new ModuleCallBuilder("app")
+            .Source("./modules/app")
+            .Set("names", forExpr)
+            .Build();
+
+        var emitter = new ModuleCallEmitter(call);
+        var result = emitter.EmitModuleBlock();
+
+        Assert.Contains("names", result);
+        Assert.Contains("for item in var.items", result);
+    }
 }

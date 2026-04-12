@@ -68,6 +68,7 @@ TerraformDotnet.Emit.ModuleCallBuilder.ModuleCallBuilder(string! moduleName) -> 
 TerraformDotnet.Emit.ModuleCallBuilder.ModuleCallBuilder(string! moduleName, TerraformDotnet.Module.TerraformModule! module) -> void
 TerraformDotnet.Emit.ModuleCallBuilder.Providers(System.Collections.Generic.IDictionary<string!, string!>! providerMap) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.Set(string! name, string! hclExpression) -> TerraformDotnet.Emit.ModuleCallBuilder!
+TerraformDotnet.Emit.ModuleCallBuilder.Set(string! name, TerraformDotnet.Hcl.Nodes.HclExpression! expression) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.SetLiteral(string! name, bool value) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.SetLiteral(string! name, int value) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallBuilder.SetLiteral(string! name, string! value) -> TerraformDotnet.Emit.ModuleCallBuilder!
@@ -75,6 +76,7 @@ TerraformDotnet.Emit.ModuleCallBuilder.Source(string! source) -> TerraformDotnet
 TerraformDotnet.Emit.ModuleCallBuilder.Version(string! version) -> TerraformDotnet.Emit.ModuleCallBuilder!
 TerraformDotnet.Emit.ModuleCallEmitter
 TerraformDotnet.Emit.ModuleCallEmitter.EmitInputValues(System.Collections.Generic.IDictionary<string!, TerraformDotnet.Emit.InputValue!>! values, bool includeQualifierComments = true, bool compactSpacing = false) -> string!
+static TerraformDotnet.Emit.ModuleCallEmitter.EmitExpression(TerraformDotnet.Hcl.Nodes.HclExpression! expression) -> string!
 TerraformDotnet.Emit.ModuleCallEmitter.EmitModuleBlock() -> string!
 TerraformDotnet.Emit.ModuleCallEmitter.EmitVariableDeclarations(TerraformDotnet.Emit.VariableDeclarationOptions? options = null) -> string!
 TerraformDotnet.Emit.ModuleCallEmitter.ModuleCallEmitter(TerraformDotnet.Emit.ModuleCall! call) -> void

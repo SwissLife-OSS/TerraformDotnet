@@ -1,5 +1,6 @@
 using System.Text;
 using TerraformDotnet.Emit;
+using TerraformDotnet.Hcl.Nodes;
 using TerraformDotnet.Module;
 
 namespace TerraformDotnet.Tests.Emit;
@@ -455,4 +456,104 @@ public class ModuleCallBuilderTests
           default     = "standard"
         }
         """);
+
+    // ── Set(HclExpression) ──────────────────────────────────────
+
+    [Fact]
+    public void Set_HclExpression_VariableReference()
+    {
+        var expr = new HclAttributeAccessExpression
+        {
+            Source = new HclVariableExpression { Name = "var" },
+            Name = "project",
+        };
+
+        var call = new ModuleCallBuilder("test")
+            .Source("./modules/test")
+            .Set("project", expr)
+            .Build();
+
+        Assert.Equal("var.project", call.Arguments["project"]);
+    }
+
+    [Fact]
+    public void Set_HclExpression_FunctionCall()
+    {
+        var expr = new HclFunctionCallExpression { Name = "merge" };
+        expr.Arguments.Add(new HclAttributeAccessExpression
+        {
+            Source = new HclVariableExpression { Name = "var" },
+            Name = "base_tags",
+        });
+        expr.Arguments.Add(new HclAttributeAccessExpression
+        {
+            Source = new HclVariableExpression { Name = "local" },
+            Name = "extra_tags",
+        });
+
+        var call = new ModuleCallBuilder("test")
+            .Source("./modules/test")
+            .Set("tags", expr)
+            .Build();
+
+        Assert.Equal("merge(var.base_tags, local.extra_tags)", call.Arguments["tags"]);
+    }
+
+    [Fact]
+    public void Set_HclExpression_EmptyTuple()
+    {
+        var expr = new HclTupleExpression();
+
+        var call = new ModuleCallBuilder("test")
+            .Source("./modules/test")
+            .Set("items", expr)
+            .Build();
+
+        Assert.Equal("[]", call.Arguments["items"]);
+    }
+
+    [Fact]
+    public void Set_HclExpression_OverridesPrevious()
+    {
+        var exprA = new HclAttributeAccessExpression
+        {
+            Source = new HclVariableExpression { Name = "var" },
+            Name = "a",
+        };
+
+        var exprB = new HclAttributeAccessExpression
+        {
+            Source = new HclVariableExpression { Name = "var" },
+            Name = "b",
+        };
+
+        var call = new ModuleCallBuilder("test")
+            .Source("./modules/test")
+            .Set("field", exprA)
+            .Set("field", exprB)
+            .Build();
+
+        Assert.Equal("var.b", call.Arguments["field"]);
+    }
+
+    [Fact]
+    public void Set_HclExpression_MixedWithStringOverload()
+    {
+        var expr = new HclAttributeAccessExpression
+        {
+            Source = new HclVariableExpression { Name = "local" },
+            Name = "computed",
+        };
+
+        var call = new ModuleCallBuilder("test")
+            .Source("./modules/test")
+            .Set("a", "var.a")
+            .Set("b", expr)
+            .SetLiteral("c", "literal")
+            .Build();
+
+        Assert.Equal("var.a", call.Arguments["a"]);
+        Assert.Equal("local.computed", call.Arguments["b"]);
+        Assert.Equal("\"literal\"", call.Arguments["c"]);
+    }
 }

@@ -309,6 +309,74 @@ builder.SetLiteral("enable_monitoring", true);
 // Emits: enable_monitoring = true
 ```
 
+### Setting variables from HCL AST expressions
+
+For complex or multi-line values, pass an `HclExpression` AST node directly.
+The expression is formatted using the HCL emitter, producing canonical output
+with proper indentation inside the module block:
+
+```csharp
+using TerraformDotnet.Hcl.Nodes;
+
+// Simple variable reference
+builder.Set("project", new HclAttributeAccessExpression
+{
+    Source = new HclVariableExpression { Name = "var" },
+    Name = "project",
+});
+// Emits: project = var.project
+
+// Function call
+var mergeExpr = new HclFunctionCallExpression { Name = "merge" };
+mergeExpr.Arguments.Add(new HclAttributeAccessExpression
+{
+    Source = new HclVariableExpression { Name = "var" },
+    Name = "base_tags",
+});
+mergeExpr.Arguments.Add(new HclAttributeAccessExpression
+{
+    Source = new HclVariableExpression { Name = "local" },
+    Name = "extra_tags",
+});
+builder.Set("tags", mergeExpr);
+// Emits: tags = merge(var.base_tags, local.extra_tags)
+
+// Multi-line: tuple of objects
+var container = new HclObjectExpression();
+container.Elements.Add(new HclObjectElement
+{
+    Key = new HclLiteralExpression { Value = "name", Kind = HclLiteralKind.String },
+    Value = new HclLiteralExpression { Value = "web", Kind = HclLiteralKind.String },
+});
+container.Elements.Add(new HclObjectElement
+{
+    Key = new HclLiteralExpression { Value = "port", Kind = HclLiteralKind.String },
+    Value = new HclLiteralExpression { Value = "8080", Kind = HclLiteralKind.Number },
+});
+
+var containers = new HclTupleExpression();
+containers.Elements.Add(container);
+builder.Set("containers", containers);
+// Emits (multi-line, properly indented inside the module block):
+//   containers = [{
+//                   name = "web"
+//                   port = 8080
+//                 }]
+```
+
+### Emitting expressions standalone
+
+`ModuleCallEmitter.EmitExpression` converts any `HclExpression` AST node to
+a canonical HCL string:
+
+```csharp
+var expr = new HclFunctionCallExpression { Name = "flatten" };
+expr.Arguments.Add(new HclTupleExpression());
+
+string hcl = ModuleCallEmitter.EmitExpression(expr);
+// "flatten([])"
+```
+
 ### Auto-filling required variables
 
 When built with a `TerraformModule`, required variables can be auto-filled:
