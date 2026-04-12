@@ -1,3 +1,4 @@
+using TerraformDotnet.Hcl.Nodes;
 using TerraformDotnet.Module;
 
 namespace TerraformDotnet.Emit;
@@ -75,6 +76,28 @@ public sealed class ModuleCallBuilder
     public ModuleCallBuilder Set(string name, string hclExpression)
     {
         _arguments[name] = hclExpression;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Sets a variable to an HCL expression AST node. The expression is formatted
+    /// using the HCL emitter, producing properly indented multi-line output when
+    /// the expression contains nested objects, tuples, or for-expressions.
+    /// <example>
+    /// <code>
+    /// builder.Set("containers", new HclTupleExpression
+    /// {
+    ///     Elements = { new HclObjectExpression { ... } }
+    /// });
+    /// </code>
+    /// </example>
+    /// </summary>
+    /// <param name="name">The variable name.</param>
+    /// <param name="expression">The HCL expression AST node.</param>
+    public ModuleCallBuilder Set(string name, HclExpression expression)
+    {
+        _arguments[name] = ModuleCallEmitter.EmitExpression(expression);
 
         return this;
     }
