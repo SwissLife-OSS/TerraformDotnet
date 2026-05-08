@@ -1,3 +1,4 @@
+using TerraformDotnet.Hcl.Exceptions;
 using TerraformDotnet.Hcl.Nodes;
 using TerraformDotnet.Types;
 
@@ -284,14 +285,20 @@ internal static class TerraformModuleLoader
     {
         var resourceName = block.Labels[0];
 
-        var source = FindAttribute(block.Body, "source")!.Value;
+        var source = FindAttribute(block.Body, "source");
+
+        if (source is null)
+        {
+            throw new HclSemanticException("Module call doesn't contain 'source' attribute.", block.Start);
+        }
+
         var version = FindAttribute(block.Body, "version")?.Value;
         var providers = FindAttribute(block.Body, "providers")?.Value;
         var count = FindAttribute(block.Body, "count")?.Value;
         var forEach = FindAttribute(block.Body, "for_each")?.Value;
         var dependsOn = ExtractDependsOn(block.Body);
 
-        return new TerraformChildModule(resourceName, source, block.Body, version, providers,
+        return new TerraformChildModule(resourceName, source.Value, block.Body, version, providers,
             count, forEach, dependsOn);
     }
 
