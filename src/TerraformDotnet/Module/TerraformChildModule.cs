@@ -24,6 +24,7 @@ public sealed class TerraformChildModule
     /// <param name="source">The local or remote source of the module</param>
     /// <param name="body">The full body AST for deep inspection.</param>
     /// <param name="version">The version of registry-sourced modules</param>
+    /// <param name="providers">The providers being passed explicitly to child modules</param>
     /// <param name="count">The <c>count</c> expression, if any.</param>
     /// <param name="forEach">The <c>for_each</c> expression, if any.</param>
     /// <param name="dependsOn">The explicit <c>depends_on</c> list.</param>
@@ -32,6 +33,7 @@ public sealed class TerraformChildModule
         HclExpression source,
         HclBody body,
         HclExpression? version = null,
+        HclExpression? providers = null,
         HclExpression? count = null,
         HclExpression? forEach = null,
         IReadOnlyList<string>? dependsOn = null)
@@ -40,6 +42,7 @@ public sealed class TerraformChildModule
         Source = source;
         Body = body;
         Version = version;
+        Providers = providers;
         Count = count;
         ForEach = forEach;
         DependsOn = dependsOn;
@@ -53,6 +56,9 @@ public sealed class TerraformChildModule
 
     /// <summary>Gets the version of the module for registry hosted modules (e.g. "1.0.0").</summary>
     public HclExpression? Version { get; }
+
+    /// <summary>Gets the map of providers to be passed into a module call.</summary>
+    public HclExpression? Providers { get; }
 
     /// <summary>Gets the full body AST for deep inspection.</summary>
     public HclBody Body { get; }

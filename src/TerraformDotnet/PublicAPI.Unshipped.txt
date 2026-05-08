@@ -5,6 +5,7 @@ TerraformDotnet.Module.TerraformChildModule.Count.get -> TerraformDotnet.Hcl.Nod
 TerraformDotnet.Module.TerraformChildModule.DependsOn.get -> System.Collections.Generic.IReadOnlyList<string!>?
 TerraformDotnet.Module.TerraformChildModule.ForEach.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
 TerraformDotnet.Module.TerraformChildModule.Name.get -> string!
+TerraformDotnet.Module.TerraformChildModule.Providers.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
 TerraformDotnet.Module.TerraformChildModule.Source.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
 TerraformDotnet.Module.TerraformChildModule.Version.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
 TerraformDotnet.Module.TerraformModule.ChildModules.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformChildModule!>!

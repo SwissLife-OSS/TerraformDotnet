@@ -45,6 +45,25 @@ public class TerraformChildModuleTests
         Assert.NotNull(r.Version);
     }
 
+    [Fact]
+    public void ModuleWithProviders()
+    {
+        var module = Parse("""
+                           module "workers" {
+                             source = "example_registry_module"
+                             providers = {
+                                aws = aws.alias
+                             }
+                             version = "1.0.0"
+                             count  = 3
+                             name   = "worker-${count.index}"
+                           }
+                           """);
+
+        var r = Assert.Single(module.ChildModules);
+        Assert.NotNull(r.Providers);
+    }
+
      [Fact]
      public void ModuleWithCount()
      {

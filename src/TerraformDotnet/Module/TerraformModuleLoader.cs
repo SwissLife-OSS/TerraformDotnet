@@ -286,11 +286,12 @@ internal static class TerraformModuleLoader
 
         var source = FindAttribute(block.Body, "source")!.Value;
         var version = FindAttribute(block.Body, "version")?.Value;
+        var providers = FindAttribute(block.Body, "providers")?.Value;
         var count = FindAttribute(block.Body, "count")?.Value;
         var forEach = FindAttribute(block.Body, "for_each")?.Value;
         var dependsOn = ExtractDependsOn(block.Body);
 
-        return new TerraformChildModule(resourceName, source, block.Body, version,
+        return new TerraformChildModule(resourceName, source, block.Body, version, providers,
             count, forEach, dependsOn);
     }
 
