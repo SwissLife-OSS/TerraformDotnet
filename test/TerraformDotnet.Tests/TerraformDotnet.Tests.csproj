@@ -26,6 +26,10 @@
   <!-- Copy __assets__ to output -->
   <ItemGroup>
     <None Include="__assets__\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="__assets__" />
+    <None Update="__assets__\compute-module\child-modules-compute.tf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <LinkBase>__assets__/</LinkBase>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -21,6 +21,7 @@ public sealed class TerraformModule
     private TerraformModule(
         IReadOnlyList<TerraformVariable> variables,
         IReadOnlyList<TerraformOutput> outputs,
+        IReadOnlyList<TerraformChildModule> childModules,
         IReadOnlyList<TerraformResource> resources,
         IReadOnlyList<TerraformDataSource> dataSources,
         IReadOnlyList<TerraformLocal> locals,
@@ -29,6 +30,7 @@ public sealed class TerraformModule
     {
         Variables = variables;
         Outputs = outputs;
+        ChildModules = childModules;
         Resources = resources;
         DataSources = dataSources;
         Locals = locals;
@@ -67,6 +69,9 @@ public sealed class TerraformModule
 
     /// <summary>All output declarations in the module.</summary>
     public IReadOnlyList<TerraformOutput> Outputs { get; }
+
+    /// <summary>All module blocks in the module.</summary>
+    public IReadOnlyList<TerraformChildModule> ChildModules { get; }
 
     /// <summary>All resource blocks in the module.</summary>
     public IReadOnlyList<TerraformResource> Resources { get; }
@@ -128,6 +133,7 @@ public sealed class TerraformModule
     {
         var variables = new List<TerraformVariable>();
         var outputs = new List<TerraformOutput>();
+        var childModules = new List<TerraformChildModule>();
         var resources = new List<TerraformResource>();
         var dataSources = new List<TerraformDataSource>();
         var locals = new List<TerraformLocal>();
@@ -138,6 +144,7 @@ public sealed class TerraformModule
         {
             variables.AddRange(TerraformModuleLoader.ExtractVariables(file));
             outputs.AddRange(TerraformModuleLoader.ExtractOutputs(file));
+            childModules.AddRange(TerraformModuleLoader.ExtractChildModules(file));
             resources.AddRange(TerraformModuleLoader.ExtractResources(file));
             dataSources.AddRange(TerraformModuleLoader.ExtractDataSources(file));
             locals.AddRange(TerraformModuleLoader.ExtractLocals(file));
@@ -152,7 +159,7 @@ public sealed class TerraformModule
         }
 
         return new TerraformModule(
-            variables, outputs, resources, dataSources,
+            variables, outputs, childModules, resources, dataSources,
             locals, providerRequirements, requiredVersion);
     }
 

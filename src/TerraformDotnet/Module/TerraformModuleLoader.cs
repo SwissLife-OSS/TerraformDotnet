@@ -56,6 +56,22 @@ internal static class TerraformModuleLoader
         return resources;
     }
 
+    /// <summary>Extracts all <c>module</c> blocks from an HCL file.</summary>
+    public static List<TerraformChildModule> ExtractChildModules(HclFile file)
+    {
+        var childModules = new List<TerraformChildModule>();
+
+        foreach (var block in file.Body.Blocks)
+        {
+            if (block.Type == "module" && block.Labels.Count == 1)
+            {
+                childModules.Add(ParseChildModule(block));
+            }
+        }
+
+        return childModules;
+    }
+
     /// <summary>Extracts all <c>data</c> blocks from an HCL file.</summary>
     public static List<TerraformDataSource> ExtractDataSources(HclFile file)
     {
@@ -262,6 +278,20 @@ internal static class TerraformModuleLoader
 
         return new TerraformResource(resourceType, resourceName, block.Body,
             count, forEach, dependsOn, provider);
+    }
+
+    private static TerraformChildModule ParseChildModule(HclBlock block)
+    {
+        var resourceName = block.Labels[0];
+
+        var source = FindAttribute(block.Body, "source")!.Value;
+        var version = FindAttribute(block.Body, "version")?.Value;
+        var count = FindAttribute(block.Body, "count")?.Value;
+        var forEach = FindAttribute(block.Body, "for_each")?.Value;
+        var dependsOn = ExtractDependsOn(block.Body);
+
+        return new TerraformChildModule(resourceName, source, block.Body, version,
+            count, forEach, dependsOn);
     }
 
     private static TerraformDataSource ParseDataSource(HclBlock block)
