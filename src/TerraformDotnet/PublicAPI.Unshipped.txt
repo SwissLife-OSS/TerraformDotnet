@@ -1,1 +1,13 @@
 #nullable enable
+TerraformDotnet.Module.TerraformModule.ModuleCalls.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformModuleCall!>!
+TerraformDotnet.Module.TerraformModuleCall
+TerraformDotnet.Module.TerraformModuleCall.Arguments.get -> System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Hcl.Nodes.HclExpression!>!
+TerraformDotnet.Module.TerraformModuleCall.Body.get -> TerraformDotnet.Hcl.Nodes.HclBody!
+TerraformDotnet.Module.TerraformModuleCall.Count.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.DependsOn.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.ForEach.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.IgnoreNestedDeprecations.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.Name.get -> string!
+TerraformDotnet.Module.TerraformModuleCall.Providers.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.Source.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Module.TerraformModuleCall.Version.get -> TerraformDotnet.Hcl.Nodes.HclExpression?

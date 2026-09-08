@@ -40,6 +40,22 @@ internal static class TerraformModuleLoader
         return outputs;
     }
 
+    /// <summary>Extracts all <c>module</c> call blocks from an HCL file.</summary>
+    public static List<TerraformModuleCall> ExtractModuleCalls(HclFile file)
+    {
+        var moduleCalls = new List<TerraformModuleCall>();
+
+        foreach (var block in file.Body.Blocks)
+        {
+            if (block.Type == "module" && block.Labels.Count == 1)
+            {
+                moduleCalls.Add(ParseModuleCall(block));
+            }
+        }
+
+        return moduleCalls;
+    }
+
     /// <summary>Extracts all <c>resource</c> blocks from an HCL file.</summary>
     public static List<TerraformResource> ExtractResources(HclFile file)
     {
@@ -262,6 +278,97 @@ internal static class TerraformModuleLoader
 
         return new TerraformResource(resourceType, resourceName, block.Body,
             count, forEach, dependsOn, provider);
+    }
+
+    private static TerraformModuleCall ParseModuleCall(HclBlock block)
+    {
+        var name = block.Labels[0];
+        HclExpression? source = null;
+        HclExpression? version = null;
+        HclExpression? count = null;
+        HclExpression? forEach = null;
+        HclExpression? dependsOn = null;
+        HclExpression? providers = null;
+        HclExpression? ignoreNestedDeprecations = null;
+        var arguments = new Dictionary<string, HclExpression>(StringComparer.Ordinal);
+
+        foreach (var attribute in block.Body.Attributes)
+        {
+            switch (attribute.Name)
+            {
+                case "source":
+                    source = attribute.Value;
+                    break;
+                case "version":
+                    version = attribute.Value;
+                    break;
+                case "count":
+                    count = attribute.Value;
+                    break;
+                case "for_each":
+                    forEach = attribute.Value;
+                    break;
+                case "depends_on":
+                    dependsOn = attribute.Value;
+                    break;
+                case "providers":
+                    providers = attribute.Value;
+                    break;
+                case "ignore_nested_deprecations":
+                    ignoreNestedDeprecations = attribute.Value;
+                    break;
+                default:
+                    arguments.Add(attribute.Name, attribute.Value);
+                    break;
+            }
+        }
+
+        if (source is null)
+        {
+            throw new FormatException(
+                $"Module call '{name}' is missing required 'source' attribute.");
+        }
+
+        if (count is not null && forEach is not null)
+        {
+            throw new FormatException(
+                $"Module call '{name}' cannot use both 'count' and 'for_each'.");
+        }
+
+        // Terraform's escaping block allows an input variable to have the same name as a
+        // built-in module argument. Its attributes are part of the child module inputs.
+        var hasEscapingBlock = false;
+
+        foreach (var nestedBlock in block.Body.Blocks)
+        {
+            if (nestedBlock.Type == "_" && nestedBlock.Labels.Count == 0)
+            {
+                if (hasEscapingBlock)
+                {
+                    throw new FormatException(
+                        $"Module call '{name}' cannot contain more than one '_' escaping block.");
+                }
+
+                hasEscapingBlock = true;
+
+                foreach (var attribute in nestedBlock.Body.Attributes)
+                {
+                    arguments.Add(attribute.Name, attribute.Value);
+                }
+            }
+        }
+
+        return new TerraformModuleCall(
+            name,
+            source,
+            block.Body,
+            arguments,
+            version,
+            count,
+            forEach,
+            dependsOn,
+            providers,
+            ignoreNestedDeprecations);
     }
 
     private static TerraformDataSource ParseDataSource(HclBlock block)

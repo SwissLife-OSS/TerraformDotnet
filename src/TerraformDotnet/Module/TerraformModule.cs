@@ -4,7 +4,8 @@ namespace TerraformDotnet.Module;
 
 /// <summary>
 /// Represents a parsed Terraform module — the merged result of all <c>.tf</c> files in a directory.
-/// Provides access to variables, outputs, resources, data sources, locals, and provider requirements.
+/// Provides access to variables, outputs, module calls, resources, data sources, locals,
+/// and provider requirements.
 /// <example>
 /// <code>
 /// var module = TerraformModule.LoadFromDirectory("/path/to/module");
@@ -21,6 +22,7 @@ public sealed class TerraformModule
     private TerraformModule(
         IReadOnlyList<TerraformVariable> variables,
         IReadOnlyList<TerraformOutput> outputs,
+        IReadOnlyList<TerraformModuleCall> moduleCalls,
         IReadOnlyList<TerraformResource> resources,
         IReadOnlyList<TerraformDataSource> dataSources,
         IReadOnlyList<TerraformLocal> locals,
@@ -29,6 +31,7 @@ public sealed class TerraformModule
     {
         Variables = variables;
         Outputs = outputs;
+        ModuleCalls = moduleCalls;
         Resources = resources;
         DataSources = dataSources;
         Locals = locals;
@@ -67,6 +70,9 @@ public sealed class TerraformModule
 
     /// <summary>All output declarations in the module.</summary>
     public IReadOnlyList<TerraformOutput> Outputs { get; }
+
+    /// <summary>All module calls declared by this module.</summary>
+    public IReadOnlyList<TerraformModuleCall> ModuleCalls { get; }
 
     /// <summary>All resource blocks in the module.</summary>
     public IReadOnlyList<TerraformResource> Resources { get; }
@@ -128,6 +134,7 @@ public sealed class TerraformModule
     {
         var variables = new List<TerraformVariable>();
         var outputs = new List<TerraformOutput>();
+        var moduleCalls = new List<TerraformModuleCall>();
         var resources = new List<TerraformResource>();
         var dataSources = new List<TerraformDataSource>();
         var locals = new List<TerraformLocal>();
@@ -138,6 +145,7 @@ public sealed class TerraformModule
         {
             variables.AddRange(TerraformModuleLoader.ExtractVariables(file));
             outputs.AddRange(TerraformModuleLoader.ExtractOutputs(file));
+            moduleCalls.AddRange(TerraformModuleLoader.ExtractModuleCalls(file));
             resources.AddRange(TerraformModuleLoader.ExtractResources(file));
             dataSources.AddRange(TerraformModuleLoader.ExtractDataSources(file));
             locals.AddRange(TerraformModuleLoader.ExtractLocals(file));
@@ -152,7 +160,7 @@ public sealed class TerraformModule
         }
 
         return new TerraformModule(
-            variables, outputs, resources, dataSources,
+            variables, outputs, moduleCalls, resources, dataSources,
             locals, providerRequirements, requiredVersion);
     }
 

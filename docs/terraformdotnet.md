@@ -242,6 +242,28 @@ foreach (var data in module.DataSources)
 }
 ```
 
+### Module calls
+
+`ModuleCalls` contains the `module` blocks declared by the loaded module. Each entry
+represents a call to a child module, not the recursively loaded child module itself.
+Terraform meta-arguments and child module input arguments are exposed separately while
+their original HCL expressions are preserved.
+
+```csharp
+foreach (var call in module.ModuleCalls)
+{
+    Console.WriteLine($"module.{call.Name}");
+
+    // Source, Version, Count, ForEach, DependsOn, and Providers are HCL expressions.
+    Console.WriteLine(ModuleCallEmitter.EmitExpression(call.Source));
+
+    foreach (var argument in call.Arguments)
+    {
+        Console.WriteLine($"  input: {argument.Key}");
+    }
+}
+```
+
 ### Locals
 
 ```csharp

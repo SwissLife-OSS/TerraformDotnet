@@ -38,6 +38,7 @@ foreach (var v in module.RequiredVariables)
 Console.WriteLine($"Optional variables: {module.OptionalVariables.Count}");
 Console.WriteLine($"Outputs: {module.Outputs.Count}");
 Console.WriteLine($"Resources: {module.Resources.Count}");
+Console.WriteLine($"Module calls: {module.ModuleCalls.Count}");
 ```
 
 ### Generate a module call

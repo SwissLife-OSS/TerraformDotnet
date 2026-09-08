@@ -151,6 +151,7 @@ public class TerraformModuleTests
         Assert.Empty(module.RequiredVariables);
         Assert.Empty(module.OptionalVariables);
         Assert.Empty(module.Outputs);
+        Assert.Empty(module.ModuleCalls);
         Assert.Empty(module.Resources);
         Assert.Empty(module.DataSources);
         Assert.Empty(module.Locals);
