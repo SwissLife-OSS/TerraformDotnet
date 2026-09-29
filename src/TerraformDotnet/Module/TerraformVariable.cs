@@ -27,7 +27,7 @@ public sealed class TerraformVariable
     /// <param name="defaultValue">The default value expression. <c>null</c> means the variable is required.</param>
     /// <param name="isSensitive">Whether the variable is marked <c>sensitive</c>.</param>
     /// <param name="isNullable">Whether the variable is marked <c>nullable</c>.</param>
-    /// <param name="validation">The validation block, if any.</param>
+    /// <param name="validations">The validation blocks, in declaration order.</param>
     internal TerraformVariable(
         string name,
         TerraformType? type = null,
@@ -35,7 +35,7 @@ public sealed class TerraformVariable
         HclExpression? defaultValue = null,
         bool isSensitive = false,
         bool isNullable = false,
-        TerraformValidation? validation = null)
+        IReadOnlyList<TerraformValidation>? validations = null)
     {
         Name = name;
         Type = type;
@@ -43,7 +43,7 @@ public sealed class TerraformVariable
         Default = defaultValue;
         IsSensitive = isSensitive;
         IsNullable = isNullable;
-        Validation = validation;
+        Validations = validations ?? [];
     }
 
     /// <summary>Gets the variable name.</summary>
@@ -91,6 +91,15 @@ public sealed class TerraformVariable
     /// <summary>Gets whether this variable is marked <c>nullable</c>.</summary>
     public bool IsNullable { get; }
 
-    /// <summary>Gets the validation block, if any.</summary>
-    public TerraformValidation? Validation { get; }
+    /// <summary>
+    /// Gets all <c>validation</c> blocks in declaration order. Terraform allows several per variable
+    /// and every one of them must hold.
+    /// </summary>
+    public IReadOnlyList<TerraformValidation> Validations { get; }
+
+    /// <summary>
+    /// Gets the first validation block, if any. Prefer <see cref="Validations"/> when a variable
+    /// declares more than one.
+    /// </summary>
+    public TerraformValidation? Validation => Validations.Count > 0 ? Validations[0] : null;
 }

@@ -165,7 +165,7 @@ internal static class TerraformModuleLoader
         HclExpression? defaultValue = null;
         var isSensitive = false;
         var isNullable = false;
-        TerraformValidation? validation = null;
+        var validations = new List<TerraformValidation>();
 
         var typeAttr = FindAttribute(block.Body, "type");
 
@@ -202,18 +202,16 @@ internal static class TerraformModuleLoader
             isNullable = nullLit.Value == "true";
         }
 
-        // Parse validation sub-block
+        // Terraform allows several validation blocks per variable; all of them must hold.
         foreach (var subBlock in block.Body.Blocks)
         {
             if (subBlock.Type == "validation" && subBlock.Labels.Count == 0)
             {
-                validation = ParseValidation(subBlock);
-
-                break; // Only first validation block is used
+                validations.Add(ParseValidation(subBlock));
             }
         }
 
-        return new TerraformVariable(name, type, description, defaultValue, isSensitive, isNullable, validation);
+        return new TerraformVariable(name, type, description, defaultValue, isSensitive, isNullable, validations);
     }
 
     private static TerraformValidation ParseValidation(HclBlock block)

@@ -11,6 +11,7 @@ Load Terraform modules, inspect their structure, and generate module calling cod
   - [From inline content](#from-inline-content)
 - [Inspecting Module Structure](#inspecting-module-structure)
   - [Variables](#variables)
+  - [Variable validation constraints](#variable-validation-constraints)
   - [Type system](#type-system)
   - [Outputs](#outputs)
   - [Resources and data sources](#resources-and-data-sources)
@@ -142,7 +143,117 @@ Variable properties:
 | `HasSentinelDefault(sentinel)` | `bool` | `true` when default is a string matching the sentinel |
 | `IsSensitive` | `bool` | Marks sensitive values |
 | `IsNullable` | `bool` | Whether `null` is allowed |
-| `Validation` | `TerraformValidation?` | Validation rule with condition and error message |
+| `Validations` | `IReadOnlyList<TerraformValidation>` | All `validation` blocks in declaration order (Terraform allows several) |
+| `Validation` | `TerraformValidation?` | The first validation block, or `null` (kept for convenience) |
+
+### Variable validation constraints
+
+`validation` blocks contain arbitrary Terraform expressions. `ConstraintExtractor` reads them **structurally** (it never
+evaluates them) and turns the common idioms into a small typed model that a UI can render safely:
+dropdowns for enums, min/max for ranges, and rules that make a variable required depending on other variables.
+
+```csharp
+var module = TerraformModule.LoadFromDirectory("./my-module");
+
+foreach (var variable in module.Variables)
+{
+    foreach (var constraint in ConstraintExtractor.Extract(variable, module))
+    {
+        switch (constraint)
+        {
+            case AllowedValuesConstraint allowed:
+                // condition = contains(["silver", "gold"], var.sla)  →  render a dropdown
+                Console.WriteLine($"{variable.Name}: one of {string.Join(", ", allowed.Values.Select(v => v.Value))}");
+                break;
+            case NumericRangeConstraint range:
+                Console.WriteLine($"{variable.Name}: {range.Min}..{range.Max}");
+                break;
+            case OpaqueConstraint opaque:
+                // Not understood: show opaque.ErrorMessage as help text and let Terraform enforce it.
+                Console.WriteLine($"{variable.Name}: {opaque.ErrorMessage}");
+                break;
+        }
+    }
+}
+```
+
+Pass the `module` so that `local.*` references (for example `contains(local.regions, var.region)`) can be resolved.
+`ConstraintExtractor.ExtractAll(module)` returns the constraints of every variable by name.
+
+Every validation block produces one or more constraints. Each keeps the block's `ErrorMessage` and the normalised
+expression text in `Source`. The constraints of different blocks are never merged.
+
+| Constraint | Recognised idioms |
+|------------|-------------------|
+| `AllowedValuesConstraint` | `contains([...], var.x)`, `var.x == "a" \|\| var.x == "b"`, `contains(local.list, var.x)`, `contains(keys(local.map), var.x)`, `contains(values({...}), var.x)` |
+| `DisallowedValuesConstraint` | `!contains([...], var.x)`, `var.x != "a" && var.x != "b"`, `!(var.x == "a" \|\| ...)` |
+| `NumericRangeConstraint` | `var.x >= 1 && var.x <= 35` (bounds can be inclusive or exclusive, and open on one side) |
+| `LengthConstraint` | `length(var.x) >= 3 && length(var.x) <= 24`, `length(var.x) > 0` |
+| `PatternConstraint` | `can(regex("^...$", var.x))`, `length(regexall("...", var.x)) > 0` |
+| `PrefixConstraint` / `SuffixConstraint` | `startswith(var.x, "app-")`, `endswith(var.x, "-prod")` |
+| `NotNullConstraint` | `var.x != null` |
+| `RequiredWhenConstraint` | `var.sla != "gold" \|\| var.x != null` (also written as `?:` or `!(… && var.x == null)`) |
+| `ConditionalConstraint` | `var.sla != "gold" \|\| var.replicas >= 3` — the inner constraint only applies when the predicate is true |
+| `OpaqueConstraint` | Everything else. Never guessed, never dropped. |
+
+Constraints on **list and set variables** use `Target = ConstraintTarget.Elements` and apply to each element, for example
+`alltrue([for v in var.x : contains(["a", "b"], v)])` or `length(setsubtract(var.x, ["a", "b"])) == 0`.
+
+A leading `var.x == null ||` guard is removed: constraints describe the rules for a value that has been provided.
+
+#### Required and optional based on other variables
+
+Terraform 1.9 allows a validation to reference other variables. The typical pattern is:
+
+```hcl
+variable "backup_vault_id" {
+  type    = string
+  default = null
+
+  validation {
+    condition     = var.sla != "gold" || var.backup_vault_id != null
+    error_message = "backup_vault_id is required for the gold SLA."
+  }
+}
+```
+
+This becomes a `RequiredWhenConstraint` whose `Predicate` is `sla == "gold"`. Evaluate it with
+`VariablePredicateEvaluator` against the values the user has entered so far:
+
+```csharp
+var vault = module.Variables.Single(v => v.Name == "backup_vault_id");
+var required = ConstraintExtractor.Extract(vault, module).OfType<RequiredWhenConstraint>().Single();
+
+var values = new Dictionary<string, TerraformLiteral>
+{
+    ["sla"] = TerraformLiteral.FromString("gold"),
+};
+
+bool? isRequired = VariablePredicateEvaluator.Evaluate(required.Predicate, values);
+// true  → show as required
+// false → show as optional
+// null  → cannot be decided yet (for example "sla" has not been chosen)
+```
+
+The evaluator uses Terraform's three-valued logic: a variable missing from the dictionary is unknown,
+`false && unknown` is `false` and `true || unknown` is `true`. Use `TerraformLiteral.Null` for a variable that is
+known to be `null`. Equality between values of different types is `false`, ordering comparisons only work on numbers.
+
+`ConstraintExtractor.GetReferencedVariables(variable)` lists the other variables a variable's validations depend on,
+which tells a UI which fields to re-evaluate when a value changes.
+
+A rule is attached to the variable whose `validation` block contains it. A rule written on the *driving* variable
+(`var.sla != "gold" || var.backup_vault_id != null` inside `sla`) is therefore a `ConditionalConstraint` on `sla`;
+it is not inverted onto `backup_vault_id`.
+
+#### Limits
+
+- Only top-level variables are modelled. Rules on attributes of object variables (`var.lock.kind`) are `OpaqueConstraint`.
+- Predicates support comparisons with literals, `contains` over literal lists, `null` checks, boolean variables and
+  `&&`/`||`/`!`. Comparing two variables, function calls on the left side (`lower(var.x) == "a"`) and other
+  expressions produce an `OpaqueConstraint`.
+- `error_message` must be a plain string literal; an interpolated message fails while loading the module.
+- Nothing here replaces Terraform: the constraints drive the UI, `terraform plan` remains the source of truth.
 
 ### Type system
 
