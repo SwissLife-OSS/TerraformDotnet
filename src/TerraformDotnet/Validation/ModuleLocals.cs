@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using TerraformDotnet.Emit;
 using TerraformDotnet.Hcl.Evaluation;
@@ -64,63 +65,90 @@ internal sealed partial class ModuleLocals
     }
 
     /// <summary>
-    /// Evaluates the named locals and everything they depend on, and returns the requested ones as
-    /// an object value for binding to <c>local</c>.
+    /// Creates a scope that evaluates locals against one binding of <c>var</c>. Every local is
+    /// evaluated at most once per scope, however many validations refer to it.
     /// </summary>
-    public HclValue Resolve(IEnumerable<string> names, HclValue variables, HclEvaluator evaluator)
+    /// <param name="variables">The object value bound to <c>var</c>.</param>
+    /// <param name="evaluator">The evaluator that runs the local expressions.</param>
+    public Scope CreateScope(HclValue variables, HclEvaluator evaluator) => new(this, variables, evaluator);
+
+    /// <summary>
+    /// The locals evaluated for one value of <c>var</c>. The scope memoizes results, so it must not be
+    /// reused after the object bound to <c>var</c> has changed.
+    /// </summary>
+    internal sealed class Scope
     {
-        var memo = new Dictionary<string, HclValue>(StringComparer.Ordinal);
-        var visiting = new HashSet<string>(StringComparer.Ordinal);
-        var result = new Dictionary<string, HclValue>(StringComparer.Ordinal);
-        foreach (var name in names)
+        private readonly ModuleLocals _owner;
+        private readonly HclValue _variables;
+        private readonly HclEvaluator _evaluator;
+        private readonly Dictionary<string, HclValue> _memo = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _visiting = new(StringComparer.Ordinal);
+
+        internal Scope(ModuleLocals owner, HclValue variables, HclEvaluator evaluator)
         {
-            result[name] = Resolve(name, variables, evaluator, memo, visiting);
+            _owner = owner;
+            _variables = variables;
+            _evaluator = evaluator;
         }
 
-        return HclValue.FromObject(result);
-    }
-
-    private HclValue Resolve(
-        string name,
-        HclValue variables,
-        HclEvaluator evaluator,
-        Dictionary<string, HclValue> memo,
-        HashSet<string> visiting)
-    {
-        if (memo.TryGetValue(name, out var known))
+        /// <summary>
+        /// Evaluates the named locals and everything they depend on, and returns the requested ones as
+        /// an object value for binding to <c>local</c>.
+        /// </summary>
+        /// <param name="names">The names of the locals a condition refers to.</param>
+        public HclValue Resolve(IReadOnlyList<string> names)
         {
-            return known;
+            var result = new Dictionary<string, HclValue>(names.Count, StringComparer.Ordinal);
+            foreach (var name in names)
+            {
+                result[name] = Resolve(name);
+            }
+
+            return Wrap(result);
         }
 
-        if (!visiting.Add(name))
+        // The dictionary is created for this value alone, so it can back the value without a copy.
+        private static HclValue Wrap(Dictionary<string, HclValue> entries)
+            => HclValue.WrapObject(new ReadOnlyDictionary<string, HclValue>(entries));
+
+        private HclValue Resolve(string name)
         {
-            return HclValue.Unknown($"local.{name} (circular reference)");
+            if (_memo.TryGetValue(name, out var known))
+            {
+                return known;
+            }
+
+            if (!_visiting.Add(name))
+            {
+                return HclValue.Unknown($"local.{name} (circular reference)");
+            }
+
+            var dependencies = _owner._dependencies[name];
+            var scope = new Dictionary<string, HclValue>(dependencies.Length, StringComparer.Ordinal);
+            foreach (var dependency in dependencies)
+            {
+                scope[dependency] = Resolve(dependency);
+            }
+
+            var context = new HclEvaluationContext();
+            context.SetVariable("var", _variables);
+            context.SetVariable("local", Wrap(scope));
+
+            HclValue value;
+            try
+            {
+                value = _evaluator.Evaluate(_owner._expressions[name], context);
+            }
+            catch (Exception)
+            {
+                value = HclValue.Unknown($"local.{name}");
+            }
+
+            _visiting.Remove(name);
+            _memo[name] = value;
+
+            return value;
         }
-
-        var scope = new Dictionary<string, HclValue>(StringComparer.Ordinal);
-        foreach (var dependency in _dependencies[name])
-        {
-            scope[dependency] = Resolve(dependency, variables, evaluator, memo, visiting);
-        }
-
-        var context = new HclEvaluationContext();
-        context.SetVariable("var", variables);
-        context.SetVariable("local", HclValue.FromObject(scope));
-
-        HclValue value;
-        try
-        {
-            value = evaluator.Evaluate(_expressions[name], context);
-        }
-        catch (Exception)
-        {
-            value = HclValue.Unknown($"local.{name}");
-        }
-
-        visiting.Remove(name);
-        memo[name] = value;
-
-        return value;
     }
 
     [GeneratedRegex(@"\blocal(?:\.(?<dot>[A-Za-z_][A-Za-z0-9_-]*)|\[\s*""(?<index>[^""]+)""\s*\])")]

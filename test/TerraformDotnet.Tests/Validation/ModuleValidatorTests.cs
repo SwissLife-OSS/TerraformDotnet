@@ -513,6 +513,136 @@ public class ModuleValidatorTests
     }
 
     [Fact]
+    public void ProbingTheRequiredNowCandidatesDoesNotChangeTheReportedValues()
+    {
+        var report = Validate(
+            SlaModule,
+            ("sla", "\"gold\""),
+            ("replicas", "3"),
+            ("backup_vault_id", "\"vault-1\""));
+
+        Assert.True(report.IsRequiredNow("backup_vault_id"));
+        Assert.Equal("vault-1", report.Values["backup_vault_id"].StringValue);
+        Assert.Equal(ValidationOutcome.Passed, Outcome(report, "backup_vault_id"));
+    }
+
+    [Fact]
+    public void RequiredNowIsProbedAgainstLocalsThatDependOnTheProbedVariable()
+    {
+        var module = Parse("""
+            variable "sla" {
+              type    = string
+              default = "silver"
+            }
+
+            variable "backup" {
+              type    = string
+              default = null
+
+              validation {
+                condition     = var.sla != "gold" || local.has_backup
+                error_message = "backup is required for gold."
+              }
+            }
+
+            locals {
+              has_backup = var.backup != null
+            }
+            """);
+
+        var report = Validate(module, ("sla", "\"gold\""), ("backup", "\"vault-1\""));
+
+        Assert.Equal(ValidationOutcome.Passed, Outcome(report, "backup"));
+        Assert.True(report.IsRequiredNow("backup"));
+    }
+
+    [Fact]
+    public void ValidationsShareTheEvaluatedLocals()
+    {
+        var module = Parse("""
+            variable "size" {
+              type    = number
+              default = 5
+
+              validation {
+                condition     = local.limit >= var.size
+                error_message = "size must not exceed the limit."
+              }
+            }
+
+            variable "count" {
+              type    = number
+              default = 20
+
+              validation {
+                condition     = local.limit >= var.count
+                error_message = "count must not exceed the limit."
+              }
+            }
+
+            locals {
+              limit = var.size * 2
+            }
+            """);
+
+        var report = Validate(module);
+
+        Assert.Equal(ValidationOutcome.Passed, Outcome(report, "size"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(report, "count"));
+    }
+
+    [Fact]
+    public void ReferencedVariablesAreTheSameForEveryCall()
+    {
+        var validator = new ModuleValidator(SlaModule);
+
+        var first = validator.Validate(Values(("sla", "\"gold\"")));
+        var second = validator.Validate(Values(("sla", "\"silver\"")));
+
+        Assert.Equal(["sla"], first.For("sla")[0].ReferencedVariables);
+        Assert.Equal(first.For("backup_vault_id")[0].ReferencedVariables, second.For("backup_vault_id")[0].ReferencedVariables);
+    }
+
+    [Fact]
+    public void IsRequiredNowAgreesWithRequiredNow()
+    {
+        var report = Validate(SlaModule, ("sla", "\"gold\""), ("replicas", "3"));
+
+        foreach (var variable in SlaModule.Variables)
+        {
+            Assert.Equal(report.RequiredNow.Contains(variable.Name), report.IsRequiredNow(variable.Name));
+        }
+
+        Assert.False(report.IsRequiredNow("does_not_exist"));
+    }
+
+    [Fact]
+    public void DefaultsAreTheSameForEveryCall()
+    {
+        var module = Parse("""
+            variable "zones" {
+              type    = list(string)
+              default = concat(["a"], ["b"])
+
+              validation {
+                condition     = length(var.zones) == 2
+                error_message = "two zones are expected."
+              }
+            }
+            """);
+        var validator = new ModuleValidator(module);
+
+        var first = validator.Validate(new Dictionary<string, HclValue>());
+        var overridden = validator.Validate(Values(("zones", "[\"x\"]")));
+        var third = validator.Validate(new Dictionary<string, HclValue>());
+
+        Assert.Equal(first.Values["zones"], third.Values["zones"]);
+        Assert.Equal(ValidationOutcome.Passed, Outcome(first, "zones"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(overridden, "zones"));
+        Assert.Equal(ValidationOutcome.Passed, Outcome(third, "zones"));
+    }
+
+    [Fact]
     public void ModulesWithoutValidationsAndValuesProduceEmptyReports()
     {
         var report = Validate(TerraformModule.LoadFromDirectory("__assets__/empty-module"));

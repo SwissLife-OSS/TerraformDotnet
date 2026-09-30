@@ -426,13 +426,26 @@ public sealed class HclEvaluator
             }
         }
 
-        if (_options.FunctionResolver is null || args.Any(a => a.Type == HclValueType.Unknown))
+        if (_options.FunctionResolver is null || ContainsUnknown(args))
         {
             return HclValue.Unknown(function.Name, args);
         }
 
         return _options.FunctionResolver.Invoke(function.Name, args)
             ?? HclValue.Unknown(function.Name, args);
+    }
+
+    private static bool ContainsUnknown(List<HclValue> values)
+    {
+        foreach (var value in values)
+        {
+            if (value.Type == HclValueType.Unknown)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary><c>can(expr)</c>: <c>true</c> when the expression evaluates without error.</summary>
@@ -535,7 +548,7 @@ public sealed class HclEvaluator
             entries[keyStr] = value;
         }
 
-        return HclValue.FromObject(entries);
+        return HclValue.FromOwnedObject(entries);
     }
 
     /// <summary>Evaluates a for expression, producing either a tuple or object result.</summary>
@@ -672,7 +685,7 @@ public sealed class HclEvaluator
 
         if (!grouped)
         {
-            return HclValue.FromObject(result);
+            return HclValue.FromOwnedObject(result);
         }
 
         foreach (var kvp in groups)
@@ -680,7 +693,7 @@ public sealed class HclEvaluator
             result[kvp.Key] = HclValue.FromTuple(kvp.Value);
         }
 
-        return HclValue.FromObject(result);
+        return HclValue.FromOwnedObject(result);
     }
 
     /// <summary>

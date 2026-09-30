@@ -271,7 +271,7 @@ the values entered so far, offline, with a restricted and side-effect free evalu
 
 ```csharp
 var module = TerraformModule.LoadFromDirectory("./my-module");
-var validator = new ModuleValidator(module);   // reusable and thread-safe
+var validator = new ModuleValidator(module);   // reusable and thread-safe; create it once per module
 
 var report = validator.Validate(new Dictionary<string, HclValue>
 {

@@ -20,6 +20,7 @@ namespace TerraformDotnet.Validation;
 public sealed class ValidationReport
 {
     private readonly Dictionary<string, List<ValidationResult>> _byVariable;
+    private readonly HashSet<string> _requiredNow;
 
     internal ValidationReport(
         IReadOnlyList<ValidationResult> results,
@@ -31,6 +32,7 @@ public sealed class ValidationReport
         Values = values;
         TypeErrors = typeErrors;
         RequiredNow = requiredNow;
+        _requiredNow = new HashSet<string>(requiredNow, StringComparer.Ordinal);
 
         _byVariable = new Dictionary<string, List<ValidationResult>>(StringComparer.Ordinal);
         foreach (var result in results)
@@ -91,5 +93,5 @@ public sealed class ValidationReport
     /// <summary>Determines whether the variable needs a non-null value with the current values.</summary>
     /// <param name="variableName">The variable name.</param>
     /// <returns><c>true</c> when the variable is listed in <see cref="RequiredNow"/>.</returns>
-    public bool IsRequiredNow(string variableName) => RequiredNow.Contains(variableName, StringComparer.Ordinal);
+    public bool IsRequiredNow(string variableName) => _requiredNow.Contains(variableName);
 }

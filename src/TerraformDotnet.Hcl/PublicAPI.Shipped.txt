@@ -62,6 +62,7 @@ static TerraformDotnet.Hcl.Evaluation.HclValue.FromTuple(System.Collections.Gene
 static TerraformDotnet.Hcl.Evaluation.HclValue.operator !=(TerraformDotnet.Hcl.Evaluation.HclValue? left, TerraformDotnet.Hcl.Evaluation.HclValue? right) -> bool
 static TerraformDotnet.Hcl.Evaluation.HclValue.operator ==(TerraformDotnet.Hcl.Evaluation.HclValue? left, TerraformDotnet.Hcl.Evaluation.HclValue? right) -> bool
 static TerraformDotnet.Hcl.Evaluation.HclValue.Unknown(string! source, System.Collections.Generic.IList<TerraformDotnet.Hcl.Evaluation.HclValue!>? args = null) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Evaluation.HclValue.WrapObject(System.Collections.ObjectModel.ReadOnlyDictionary<string!, TerraformDotnet.Hcl.Evaluation.HclValue!>! entries) -> TerraformDotnet.Hcl.Evaluation.HclValue!
 static TerraformDotnet.Hcl.Nodes.HclExpression.Parse(string! expression) -> TerraformDotnet.Hcl.Nodes.HclExpression!
 static TerraformDotnet.Hcl.Nodes.HclExpression.TryParse(string? expression, out TerraformDotnet.Hcl.Nodes.HclExpression? result) -> bool
 static TerraformDotnet.Hcl.Nodes.HclFile.Load(System.ReadOnlySpan<byte> hclData) -> TerraformDotnet.Hcl.Nodes.HclFile!
