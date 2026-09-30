@@ -264,7 +264,7 @@ public class TerraformVariableTests
     }
 
     [Fact]
-    public void NonNullableVariableDefaultsFalse()
+    public void VariablesAreNullableByDefault()
     {
         var module = Parse("""
             variable "name" {
@@ -272,7 +272,79 @@ public class TerraformVariableTests
             }
             """);
 
+        Assert.True(module.Variables[0].IsNullable);
+    }
+
+    [Fact]
+    public void NullableFalseMarksTheVariableNonNullable()
+    {
+        var module = Parse("""
+            variable "name" {
+              type     = string
+              nullable = false
+            }
+            """);
+
         Assert.False(module.Variables[0].IsNullable);
+    }
+
+    [Fact]
+    public void ErrorMessageCanBeANonLiteralExpression()
+    {
+        var module = Parse("""
+            variable "port" {
+              type = number
+              validation {
+                condition     = var.port > 0
+                error_message = format("Port %d is invalid.", var.port)
+              }
+            }
+            """);
+
+        var validation = Assert.Single(module.Variables[0].Validations);
+        Assert.Equal("format(\"Port %d is invalid.\", var.port)", validation.ErrorMessage);
+        Assert.IsType<HclFunctionCallExpression>(validation.ErrorMessageExpression);
+    }
+
+    [Fact]
+    public void LiteralErrorMessageKeepsTheLiteralExpression()
+    {
+        var module = Parse("""
+            variable "port" {
+              type = number
+              validation {
+                condition     = var.port > 0
+                error_message = "Port ${var.port} is invalid."
+              }
+            }
+            """);
+
+        var validation = Assert.Single(module.Variables[0].Validations);
+        Assert.Equal("Port ${var.port} is invalid.", validation.ErrorMessage);
+        Assert.Equal(HclLiteralKind.String, Assert.IsType<HclLiteralExpression>(validation.ErrorMessageExpression).Kind);
+    }
+
+    [Fact]
+    public void ErrorMessageMayBeAHeredoc()
+    {
+        var module = Parse("""
+            variable "port" {
+              type = number
+              validation {
+                condition     = var.port > 0
+                error_message = <<-EOT
+                  Port must be positive.
+                EOT
+              }
+            }
+
+            variable "other" {
+              type = string
+            }
+            """);
+
+        Assert.Equal(2, module.Variables.Count);
+        Assert.Contains("Port must be positive.", module.Variables[0].Validations[0].ErrorMessage, StringComparison.Ordinal);
     }
 
     [Fact]

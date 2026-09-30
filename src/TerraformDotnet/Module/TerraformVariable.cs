@@ -26,7 +26,7 @@ public sealed class TerraformVariable
     /// <param name="description">The variable description.</param>
     /// <param name="defaultValue">The default value expression. <c>null</c> means the variable is required.</param>
     /// <param name="isSensitive">Whether the variable is marked <c>sensitive</c>.</param>
-    /// <param name="isNullable">Whether the variable is marked <c>nullable</c>.</param>
+    /// <param name="isNullable">Whether the variable accepts <c>null</c>; Terraform defaults to <c>true</c>.</param>
     /// <param name="validations">The validation blocks, in declaration order.</param>
     internal TerraformVariable(
         string name,
@@ -34,7 +34,7 @@ public sealed class TerraformVariable
         string? description = null,
         HclExpression? defaultValue = null,
         bool isSensitive = false,
-        bool isNullable = false,
+        bool isNullable = true,
         IReadOnlyList<TerraformValidation>? validations = null)
     {
         Name = name;
@@ -88,7 +88,10 @@ public sealed class TerraformVariable
     /// <summary>Gets whether this variable is marked <c>sensitive</c>.</summary>
     public bool IsSensitive { get; }
 
-    /// <summary>Gets whether this variable is marked <c>nullable</c>.</summary>
+    /// <summary>
+    /// Gets whether the variable accepts <c>null</c>. Terraform's default is <c>true</c>, so this is
+    /// only <c>false</c> when the declaration says <c>nullable = false</c>.
+    /// </summary>
     public bool IsNullable { get; }
 
     /// <summary>

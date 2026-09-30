@@ -12,6 +12,7 @@ Load Terraform modules, inspect their structure, and generate module calling cod
 - [Inspecting Module Structure](#inspecting-module-structure)
   - [Variables](#variables)
   - [Variable validation constraints](#variable-validation-constraints)
+  - [Evaluating validations](#evaluating-validations)
   - [Type system](#type-system)
   - [Outputs](#outputs)
   - [Resources and data sources](#resources-and-data-sources)
@@ -142,7 +143,7 @@ Variable properties:
 | `IsOptional` | `bool` | `true` when default is set |
 | `HasSentinelDefault(sentinel)` | `bool` | `true` when default is a string matching the sentinel |
 | `IsSensitive` | `bool` | Marks sensitive values |
-| `IsNullable` | `bool` | Whether `null` is allowed |
+| `IsNullable` | `bool` | Whether `null` is allowed. Defaults to `true` like Terraform; only `nullable = false` turns it off |
 | `Validations` | `IReadOnlyList<TerraformValidation>` | All `validation` blocks in declaration order (Terraform allows several) |
 | `Validation` | `TerraformValidation?` | The first validation block, or `null` (kept for convenience) |
 
@@ -252,8 +253,117 @@ it is not inverted onto `backup_vault_id`.
 - Predicates support comparisons with literals, `contains` over literal lists, `null` checks, boolean variables and
   `&&`/`||`/`!`. Comparing two variables, function calls on the left side (`lower(var.x) == "a"`) and other
   expressions produce an `OpaqueConstraint`.
-- `error_message` must be a plain string literal; an interpolated message fails while loading the module.
 - Nothing here replaces Terraform: the constraints drive the UI, `terraform plan` remains the source of truth.
+  Use [`ModuleValidator`](#evaluating-validations) when you need every validation evaluated, not only the common idioms.
+
+`error_message` may be a plain string, a heredoc, an interpolated string or any other expression such as
+`format(...)`. `TerraformValidation.ErrorMessage` holds its HCL text, `ErrorMessageExpression` the parsed expression.
+
+### Evaluating validations
+
+`ConstraintExtractor` recognises idioms. `ModuleValidator` goes further: it **evaluates** every `validation` block against
+the values entered so far, offline, with a restricted and side-effect free evaluator. Each validation ends up as one of
+
+| Outcome | Meaning |
+|---------|---------|
+| `Passed` | The condition is `true`. |
+| `Failed` | The condition is definitely `false`; `ErrorMessage` holds the rendered `error_message`. |
+| `Indeterminate` | The condition cannot be decided offline; `Reason` says why. It is **never** reported as `Failed`. |
+
+```csharp
+var module = TerraformModule.LoadFromDirectory("./my-module");
+var validator = new ModuleValidator(module);   // reusable and thread-safe
+
+var report = validator.Validate(new Dictionary<string, HclValue>
+{
+    ["sla"] = HclValue.FromString("gold"),
+    ["replicas"] = HclValue.FromNumber(2),
+});
+
+foreach (var failure in report.Failures)
+{
+    Console.WriteLine($"{failure.VariableName}: {failure.ErrorMessage}");
+}
+
+foreach (var open in report.Indeterminate)
+{
+    Console.WriteLine($"{open.VariableName}: not checked ({open.Reason})");
+}
+
+// Variables that have to be filled in right now, for example because "sla" is "gold".
+foreach (var name in report.RequiredNow)
+{
+    Console.WriteLine($"{name} is required");
+}
+```
+
+Values can also be given as HCL expressions (`Validate(IReadOnlyDictionary<string, HclExpression>)`, values that refer to
+things outside the module are unknown) or as the arguments of a `TerraformModuleCall`.
+
+How values are resolved, per variable:
+
+1. A supplied value is used; a missing one falls back to the default (which is evaluated as well).
+2. A required variable without a value has no value *yet*: validations that depend on it are `Indeterminate`,
+   they do not fail.
+3. The value is converted to the declared type with Terraform's rules (`"5"` → `5`, `1` → `"1"`, sets are sorted and
+   de-duplicated, `optional(T, default)` attributes are filled in, undeclared object attributes are dropped). A value
+   that cannot be converted ends up in `report.TypeErrors`, and the validations of that variable are `Indeterminate`.
+4. An explicit `HclValue.Null` stays `null` for nullable variables and is replaced by the default when
+   `nullable = false`.
+
+`ValidationReport` members:
+
+| Member | Description |
+|--------|-------------|
+| `Results`, `For(name)` | Every validation with its `VariableName`, `Index`, `Outcome`, `ErrorMessage`, `Reason` and `ReferencedVariables` |
+| `Failures`, `Indeterminate`, `HasFailures`, `HasIndeterminate` | Filtered views |
+| `Values` | The effective (defaulted and converted) value of every variable |
+| `TypeErrors` | Variables whose supplied value does not match their type |
+| `RequiredNow`, `IsRequiredNow(name)` | Variables without a default, plus variables with `default = null` that fail a validation when left `null` given the current values |
+
+#### What is evaluated
+
+The evaluator supports the Terraform expression language (operators, conditionals, `for` expressions, splat, index and
+attribute access, string interpolation) with `var.*` and `local.*` references. Locals are resolved lazily and only when a
+condition refers to them; cycles are `Indeterminate`.
+
+Functions are limited to a deterministic whitelist (`TerraformFunctions.SupportedFunctions`). It is checked against
+`terraform console` by a golden test suite; only `cidrcontains`, which newer Terraform versions add, is covered by unit
+tests alone:
+
+- Collections: `alltrue anytrue chunklist coalesce coalescelist compact concat contains distinct element flatten index keys
+  length lookup matchkeys merge one range reverse setintersection setproduct setsubtract setunion slice sort sum
+  transpose values zipmap`
+- Strings: `chomp endswith format formatlist indent join lower regex regexall replace split startswith strcontains strrev
+  substr title trim trimprefix trimspace trimsuffix upper`
+- Numbers: `abs ceil floor log max min parseint pow signum`
+- Conversion and encoding: `base64decode base64encode jsondecode jsonencode nonsensitive sensitive tobool tolist tomap
+  tonumber toset tostring urlencode`
+- Networking: `cidrcontains cidrhost cidrnetmask cidrsubnet cidrsubnets`
+- `can` and `try` are part of the evaluator.
+
+Anything else is **not** evaluated and makes the validation `Indeterminate`: functions with side effects or environment
+access (`file`, `templatefile`, `timestamp`, `uuid`, `sha*`, …), `provider::…` functions, data sources, resources,
+`path.*`, `terraform.*`, `each.*`, and template directives (`%{ if }`). Plug in your own functions with
+`ModuleValidatorOptions.FunctionResolver` (an `IHclFunctionResolver`, for example one that delegates to
+`TerraformFunctions.Default` first).
+
+Limits protect the host from expensive conditions: `MaxDepth`, `MaxIterations` (all `for` loops together) and a 250 ms
+timeout per regular expression. Exceeding one gives `Indeterminate`.
+
+#### Known differences from Terraform
+
+The result is only `Failed` when Terraform would definitely fail as well; when in doubt it is `Indeterminate`.
+
+- `&&`, `||` and `?:` short-circuit. Terraform evaluates both operands, so a condition that errors in an operand Terraform
+  would evaluate can be `Passed` here.
+- Numbers are IEEE doubles; Terraform uses arbitrary precision. Values that cannot be reproduced exactly
+  (for example `parseint` of huge numbers) are unknown, and `-0` is written as `0`.
+- Regular expressions are translated from RE2 to .NET; unsupported syntax (`(?m)`, `(?U)`, look-around, back-references,
+  Unicode script classes) and `format` verbs that are not implemented (`%e %g %c %U`) make the call unknown.
+- `cidr*` functions reject leading zeros, IPv4-mapped and zoned addresses (unknown), and negative `cidrsubnet` arguments.
+- A rendered `error_message` has its surrounding whitespace trimmed (the trailing newline of a heredoc), and `<<-` heredoc
+  indentation is not removed.
 
 ### Type system
 

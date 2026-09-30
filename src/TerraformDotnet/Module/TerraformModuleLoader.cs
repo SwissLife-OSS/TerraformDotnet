@@ -1,3 +1,4 @@
+using TerraformDotnet.Emit;
 using TerraformDotnet.Hcl.Nodes;
 using TerraformDotnet.Types;
 
@@ -164,7 +165,7 @@ internal static class TerraformModuleLoader
         string? description = null;
         HclExpression? defaultValue = null;
         var isSensitive = false;
-        var isNullable = false;
+        var isNullable = true;
         var validations = new List<TerraformValidation>();
 
         var typeAttr = FindAttribute(block.Body, "type");
@@ -222,11 +223,14 @@ internal static class TerraformModuleLoader
         var condition = conditionAttr?.Value
             ?? throw new FormatException("Validation block is missing 'condition' attribute.");
 
-        var errorMessage = errorAttr?.Value is HclLiteralExpression { Kind: HclLiteralKind.String } lit
-            ? lit.Value ?? string.Empty
-            : throw new FormatException("Validation block is missing 'error_message' attribute.");
+        var errorExpression = errorAttr?.Value
+            ?? throw new FormatException("Validation block is missing 'error_message' attribute.");
 
-        return new TerraformValidation(condition, errorMessage);
+        var errorMessage = errorExpression is HclLiteralExpression { Kind: HclLiteralKind.String } lit
+            ? lit.Value ?? string.Empty
+            : ModuleCallEmitter.EmitExpression(errorExpression);
+
+        return new TerraformValidation(condition, errorMessage, errorExpression);
     }
 
     private static TerraformOutput ParseOutput(HclBlock block)

@@ -129,4 +129,59 @@ public sealed class HclEvaluatorTemplateTests
         Assert.Equal(HclValueType.Bool, result.Type);
         Assert.True(result.BoolValue);
     }
+
+    private HclValue EvaluateParsed(string expression)
+    {
+        var ctx = new HclEvaluationContext();
+        ctx.SetVariable("name", HclValue.FromString("world"));
+        ctx.SetVariable("count", HclValue.FromNumber(42));
+        ctx.SetVariable("enabled", HclValue.FromBool(true));
+        ctx.SetVariable("items", HclValue.FromTuple([HclValue.FromNumber(1)]));
+
+        return _evaluator.Evaluate(HclExpression.Parse(expression), ctx);
+    }
+
+    [Theory]
+    [InlineData("\"hello ${name}\"", "hello world")]
+    [InlineData("\"${name}-${count}\"", "world-42")]
+    [InlineData("\"n=${count + 1}!\"", "n=43!")]
+    [InlineData("\"$${literal} %%{literal}\"", "${literal} %{literal}")]
+    [InlineData("\"${name == \\\"world\\\" ? \\\"yes\\\" : \\\"no\\\"}\"", "yes")]
+    public void QuotedStringInterpolationIsEvaluated(string expression, string expected)
+    {
+        var result = EvaluateParsed(expression);
+
+        Assert.Equal(HclValueType.String, result.Type);
+        Assert.Equal(expected, result.StringValue);
+    }
+
+    [Fact]
+    public void QuotedStringWithSingleInterpolationKeepsTheValueType()
+    {
+        Assert.Equal(HclValueType.Number, EvaluateParsed("\"${count}\"").Type);
+        Assert.Equal(HclValueType.Bool, EvaluateParsed("\"${enabled}\"").Type);
+        Assert.Equal(HclValueType.Tuple, EvaluateParsed("\"${items}\"").Type);
+    }
+
+    [Fact]
+    public void QuotedStringInterpolationOfUnknownIsUnknown()
+    {
+        var result = EvaluateParsed("\"a ${missing_fn(1)} b\"");
+
+        Assert.Equal(HclValueType.Unknown, result.Type);
+    }
+
+    [Fact]
+    public void QuotedStringWithUnsupportedDirectiveIsUnknown()
+    {
+        var result = EvaluateParsed("\"%{ if enabled }a%{ endif }\"");
+
+        Assert.Equal(HclValueType.Unknown, result.Type);
+    }
+
+    [Fact]
+    public void QuotedStringInterpolatingACollectionThrows()
+    {
+        Assert.Throws<InvalidOperationException>(() => EvaluateParsed("\"a ${items}\""));
+    }
 }

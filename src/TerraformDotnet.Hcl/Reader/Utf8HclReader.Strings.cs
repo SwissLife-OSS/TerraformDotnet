@@ -172,18 +172,12 @@ public ref partial struct Utf8HclReader
                         int contentEnd = lineStart;
                         ReadOnlySpan<byte> content = _buffer[contentStart..contentEnd];
 
-                        // Advance past the marker line
+                        // Advance to the end of the marker but leave the line break unconsumed: it is
+                        // the terminator of the attribute the heredoc belongs to, and swallowing it
+                        // would make the next attribute name look like part of the expression.
+                        // Indentation stripping of indented heredocs happens at decode time.
                         _position = afterMarker;
                         _column += afterMarker - lineStart;
-                        if (!IsAtEnd)
-                        {
-                            ConsumeNewline();
-                        }
-
-                        if (indented)
-                        {
-                            return content; // Indentation stripping happens at decode time
-                        }
 
                         return content;
                     }

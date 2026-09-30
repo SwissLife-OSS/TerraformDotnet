@@ -200,7 +200,7 @@ public sealed class HclValue : IEquatable<HclValue>
     public string ToHclString() => Type switch
     {
         HclValueType.String => _stringValue!,
-        HclValueType.Number => _numberValue.ToString(CultureInfo.InvariantCulture),
+        HclValueType.Number => HclNumberFormatter.Format(_numberValue),
         HclValueType.Bool => _boolValue ? "true" : "false",
         HclValueType.Null => "null",
         _ => throw new InvalidOperationException(
