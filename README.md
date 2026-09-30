@@ -168,9 +168,11 @@ writer.Flush();
 | **Reader** | `TerraformDotnet.Hcl.Reader` | `ref struct` tokenizer — zero-copy, pull-based |
 | **Nodes** | `TerraformDotnet.Hcl.Nodes` | AST model with visitor pattern and `DeepClone()` |
 | **Writer** | `TerraformDotnet.Hcl.Writer` | Forward-only writer producing `terraform fmt` output |
-| **Evaluation** | `TerraformDotnet.Hcl.Evaluation` | Variable resolution engine |
+| **Evaluation** | `TerraformDotnet.Hcl.Evaluation` | Expression evaluator with pluggable function resolver |
 | **Module** | `TerraformDotnet.Module` | Terraform module loader and model |
 | **Emit** | `TerraformDotnet.Emit` | Module call builder and code emitter |
+| **Functions** | `TerraformDotnet.Evaluation` | Terraform function library and type conversion |
+| **Validation** | `TerraformDotnet.Validation` | Variable constraint extraction and validation evaluation |
 
 See [docs/hcl.md](docs/hcl.md) and [docs/terraformdotnet.md](docs/terraformdotnet.md) for detailed documentation.
 

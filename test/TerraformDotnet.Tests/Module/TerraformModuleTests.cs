@@ -254,7 +254,7 @@ public class TerraformModuleTests
 
         // backup_retention has a validation block
         var retentionVar = module.Variables.First(v => v.Name == "backup_retention");
-        Assert.NotNull(retentionVar.Validation);
+        Assert.NotEmpty(retentionVar.Validations);
 
         // db_nullable_field is nullable
         var nullableVar = module.Variables.First(v => v.Name == "db_nullable_field");

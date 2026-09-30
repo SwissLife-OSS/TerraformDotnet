@@ -139,9 +139,9 @@ public class TerraformVariableTests
             """);
 
         var v = Assert.Single(module.Variables);
-        Assert.NotNull(v.Validation);
-        Assert.Equal("Must be between 1 and 35.", v.Validation.ErrorMessage);
-        Assert.NotNull(v.Validation.Condition);
+        var validation = Assert.Single(v.Validations);
+        Assert.Equal("Must be between 1 and 35.", validation.ErrorMessage);
+        Assert.NotNull(validation.Condition);
     }
 
     [Fact]
@@ -169,7 +169,6 @@ public class TerraformVariableTests
         Assert.Equal(2, v.Validations.Count);
         Assert.Equal("At least 1.", v.Validations[0].ErrorMessage);
         Assert.Equal("At most 35.", v.Validations[1].ErrorMessage);
-        Assert.Same(v.Validations[0], v.Validation);
     }
 
     [Fact]
@@ -184,7 +183,6 @@ public class TerraformVariableTests
         var v = Assert.Single(module.Variables);
 
         Assert.Empty(v.Validations);
-        Assert.Null(v.Validation);
     }
 
     [Fact]

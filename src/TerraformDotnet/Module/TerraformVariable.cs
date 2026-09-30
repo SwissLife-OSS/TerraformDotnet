@@ -30,12 +30,12 @@ public sealed class TerraformVariable
     /// <param name="validations">The validation blocks, in declaration order.</param>
     internal TerraformVariable(
         string name,
-        TerraformType? type = null,
-        string? description = null,
-        HclExpression? defaultValue = null,
-        bool isSensitive = false,
-        bool isNullable = true,
-        IReadOnlyList<TerraformValidation>? validations = null)
+        TerraformType? type,
+        string? description,
+        HclExpression? defaultValue,
+        bool isSensitive,
+        bool isNullable,
+        IReadOnlyList<TerraformValidation> validations)
     {
         Name = name;
         Type = type;
@@ -43,7 +43,7 @@ public sealed class TerraformVariable
         Default = defaultValue;
         IsSensitive = isSensitive;
         IsNullable = isNullable;
-        Validations = validations ?? [];
+        Validations = validations;
     }
 
     /// <summary>Gets the variable name.</summary>
@@ -99,10 +99,4 @@ public sealed class TerraformVariable
     /// and every one of them must hold.
     /// </summary>
     public IReadOnlyList<TerraformValidation> Validations { get; }
-
-    /// <summary>
-    /// Gets the first validation block, if any. Prefer <see cref="Validations"/> when a variable
-    /// declares more than one.
-    /// </summary>
-    public TerraformValidation? Validation => Validations.Count > 0 ? Validations[0] : null;
 }

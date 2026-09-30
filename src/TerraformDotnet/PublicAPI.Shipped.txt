@@ -173,7 +173,6 @@ TerraformDotnet.Module.TerraformVariable.HasSentinelDefault(string! sentinel) ->
 TerraformDotnet.Module.TerraformVariable.IsSensitive.get -> bool
 TerraformDotnet.Module.TerraformVariable.Name.get -> string!
 TerraformDotnet.Module.TerraformVariable.Type.get -> TerraformDotnet.Types.TerraformType?
-TerraformDotnet.Module.TerraformVariable.Validation.get -> TerraformDotnet.Module.TerraformValidation?
 TerraformDotnet.Module.TerraformVariable.Validations.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformValidation!>!
 TerraformDotnet.Types.TerraformCollectionType
 TerraformDotnet.Types.TerraformCollectionType.Element.get -> TerraformDotnet.Types.TerraformType!

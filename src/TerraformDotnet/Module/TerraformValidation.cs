@@ -20,13 +20,12 @@ public sealed class TerraformValidation
     /// </summary>
     /// <param name="condition">The condition expression.</param>
     /// <param name="errorMessage">The error message text.</param>
-    /// <param name="errorMessageExpression">The <c>error_message</c> expression; defaults to a string literal of <paramref name="errorMessage"/>.</param>
-    internal TerraformValidation(HclExpression condition, string errorMessage, HclExpression? errorMessageExpression = null)
+    /// <param name="errorMessageExpression">The <c>error_message</c> expression.</param>
+    internal TerraformValidation(HclExpression condition, string errorMessage, HclExpression errorMessageExpression)
     {
         Condition = condition;
         ErrorMessage = errorMessage;
-        ErrorMessageExpression = errorMessageExpression
-            ?? new HclLiteralExpression { Value = errorMessage, Kind = HclLiteralKind.String };
+        ErrorMessageExpression = errorMessageExpression;
     }
 
     /// <summary>Gets the condition expression.</summary>

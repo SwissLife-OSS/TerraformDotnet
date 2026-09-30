@@ -145,7 +145,6 @@ Variable properties:
 | `IsSensitive` | `bool` | Marks sensitive values |
 | `IsNullable` | `bool` | Whether `null` is allowed. Defaults to `true` like Terraform; only `nullable = false` turns it off |
 | `Validations` | `IReadOnlyList<TerraformValidation>` | All `validation` blocks in declaration order (Terraform allows several) |
-| `Validation` | `TerraformValidation?` | The first validation block, or `null` (kept for convenience) |
 
 ### Variable validation constraints
 
