@@ -310,7 +310,17 @@ public ref partial struct Utf8HclReader
         // Identifier, keyword, or function call
         if (IsIdStart(b) || IsUtf8MultiByteStart(b))
         {
-            ReadOnlySpan<byte> ident = ScanIdentifier();
+            int identStart = _position;
+            ScanIdentifier();
+
+            // Namespaced function names such as provider::azapi::parse_resource_id(...)
+            while (PeekByte() == (byte)':' && PeekByte(1) == (byte)':' && IsIdStart(PeekByte(2)))
+            {
+                AdvanceBytes(2);
+                ScanIdentifier();
+            }
+
+            ReadOnlySpan<byte> ident = _buffer[identStart.._position];
             SkipWhitespace();
 
             // Check for function call: identifier '('

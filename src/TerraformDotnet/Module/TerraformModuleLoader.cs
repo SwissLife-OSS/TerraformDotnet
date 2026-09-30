@@ -1,3 +1,4 @@
+using TerraformDotnet.Emit;
 using TerraformDotnet.Hcl.Nodes;
 using TerraformDotnet.Types;
 
@@ -164,8 +165,8 @@ internal static class TerraformModuleLoader
         string? description = null;
         HclExpression? defaultValue = null;
         var isSensitive = false;
-        var isNullable = false;
-        TerraformValidation? validation = null;
+        var isNullable = true;
+        var validations = new List<TerraformValidation>();
 
         var typeAttr = FindAttribute(block.Body, "type");
 
@@ -202,18 +203,16 @@ internal static class TerraformModuleLoader
             isNullable = nullLit.Value == "true";
         }
 
-        // Parse validation sub-block
+        // Terraform allows several validation blocks per variable; all of them must hold.
         foreach (var subBlock in block.Body.Blocks)
         {
             if (subBlock.Type == "validation" && subBlock.Labels.Count == 0)
             {
-                validation = ParseValidation(subBlock);
-
-                break; // Only first validation block is used
+                validations.Add(ParseValidation(subBlock));
             }
         }
 
-        return new TerraformVariable(name, type, description, defaultValue, isSensitive, isNullable, validation);
+        return new TerraformVariable(name, type, description, defaultValue, isSensitive, isNullable, validations);
     }
 
     private static TerraformValidation ParseValidation(HclBlock block)
@@ -224,11 +223,14 @@ internal static class TerraformModuleLoader
         var condition = conditionAttr?.Value
             ?? throw new FormatException("Validation block is missing 'condition' attribute.");
 
-        var errorMessage = errorAttr?.Value is HclLiteralExpression { Kind: HclLiteralKind.String } lit
-            ? lit.Value ?? string.Empty
-            : throw new FormatException("Validation block is missing 'error_message' attribute.");
+        var errorExpression = errorAttr?.Value
+            ?? throw new FormatException("Validation block is missing 'error_message' attribute.");
 
-        return new TerraformValidation(condition, errorMessage);
+        var errorMessage = errorExpression is HclLiteralExpression { Kind: HclLiteralKind.String } lit
+            ? lit.Value ?? string.Empty
+            : ModuleCallEmitter.EmitExpression(errorExpression);
+
+        return new TerraformValidation(condition, errorMessage, errorExpression);
     }
 
     private static TerraformOutput ParseOutput(HclBlock block)

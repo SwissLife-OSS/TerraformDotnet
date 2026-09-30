@@ -251,4 +251,14 @@ public sealed class HclEvaluatorCollectionTests
         Assert.Equal(HclValueType.Tuple, result.TupleValue[0].Type);
         Assert.Equal(1.0, result.TupleValue[0].TupleValue[0].NumberValue);
     }
+
+    [Fact]
+    public void ForExpressionIteratesObjectKeysInLexicalOrder()
+    {
+        var result = _evaluator.Evaluate(
+            HclExpression.Parse("[for k, v in {b = 2, a = 1, c = 3} : k]"),
+            new HclEvaluationContext());
+
+        Assert.Equal(["a", "b", "c"], result.TupleValue.Select(v => v.StringValue));
+    }
 }

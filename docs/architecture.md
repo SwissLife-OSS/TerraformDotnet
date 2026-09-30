@@ -163,8 +163,12 @@ The writer has two usage modes:
 - Template interpolation → resolve and concatenate
 
 **What does NOT get resolved**:
-- Function calls → return `HclValue.Unknown(functionName, args)`
+- Function calls without an `IHclFunctionResolver` (or that the resolver does not know) → `HclValue.Unknown(functionName, args)`
 - Any expression depending on an unknown → propagates unknown
+
+`HclEvaluatorOptions` supplies the function resolver, the limits (`MaxDepth`, `MaxIterations`) and the
+undefined-variable policy. `TerraformDotnet.Evaluation.TerraformFunctions` is the Terraform function library, and
+`TerraformDotnet.Validation.ModuleValidator` evaluates a module's variable validations on top of it.
 
 **Key use-case**: Extracting default values from Terraform variable blocks:
 

@@ -27,6 +27,9 @@ public sealed class HclValue : IEquatable<HclValue>
     /// <summary>The singleton <c>false</c> value.</summary>
     public static readonly HclValue False = new(false);
 
+    // Shared by every unknown value without arguments; the collection is read-only and empty.
+    private static readonly ReadOnlyCollection<HclValue> NoArguments = new(Array.Empty<HclValue>());
+
     private readonly string? _stringValue;
     private readonly double _numberValue;
     private readonly bool _boolValue;
@@ -166,6 +169,30 @@ public sealed class HclValue : IEquatable<HclValue>
     }
 
     /// <summary>
+    /// Creates an object (map) value that uses the given dictionary directly instead of copying it.
+    /// </summary>
+    /// <param name="entries">
+    /// A read-only view of the string-keyed entries. The caller must not change the underlying
+    /// dictionary while the value, or any value derived from it, is in use; use
+    /// <see cref="FromObject(IDictionary{string, HclValue})"/> when the entries may change.
+    /// </param>
+    /// <returns>An <see cref="HclValue"/> of type <see cref="HclValueType.Object"/>.</returns>
+    /// <remarks>
+    /// Avoids the copy that <see cref="FromObject(IDictionary{string, HclValue})"/> makes, which matters
+    /// when a large object is built once and read many times, such as the <c>var</c> object of a module.
+    /// </remarks>
+    public static HclValue WrapObject(ReadOnlyDictionary<string, HclValue> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        return new HclValue(entries);
+    }
+
+    /// <summary>Creates an object value that takes ownership of a dictionary the caller no longer uses.</summary>
+    internal static HclValue FromOwnedObject(Dictionary<string, HclValue> entries)
+        => new(new ReadOnlyDictionary<string, HclValue>(entries));
+
+    /// <summary>
     /// Creates an unknown value representing an unresolvable expression, such as a function call.
     /// </summary>
     /// <param name="source">A description of why this value is unknown (e.g. function name).</param>
@@ -175,8 +202,7 @@ public sealed class HclValue : IEquatable<HclValue>
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        return new HclValue(source, new ReadOnlyCollection<HclValue>(
-            args ?? Array.Empty<HclValue>()));
+        return new HclValue(source, args is null ? NoArguments : new ReadOnlyCollection<HclValue>(args));
     }
 
     /// <summary>
@@ -200,7 +226,7 @@ public sealed class HclValue : IEquatable<HclValue>
     public string ToHclString() => Type switch
     {
         HclValueType.String => _stringValue!,
-        HclValueType.Number => _numberValue.ToString(CultureInfo.InvariantCulture),
+        HclValueType.Number => HclNumberFormatter.Format(_numberValue),
         HclValueType.Bool => _boolValue ? "true" : "false",
         HclValueType.Null => "null",
         _ => throw new InvalidOperationException(

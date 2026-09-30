@@ -62,6 +62,9 @@ static TerraformDotnet.Hcl.Evaluation.HclValue.FromTuple(System.Collections.Gene
 static TerraformDotnet.Hcl.Evaluation.HclValue.operator !=(TerraformDotnet.Hcl.Evaluation.HclValue? left, TerraformDotnet.Hcl.Evaluation.HclValue? right) -> bool
 static TerraformDotnet.Hcl.Evaluation.HclValue.operator ==(TerraformDotnet.Hcl.Evaluation.HclValue? left, TerraformDotnet.Hcl.Evaluation.HclValue? right) -> bool
 static TerraformDotnet.Hcl.Evaluation.HclValue.Unknown(string! source, System.Collections.Generic.IList<TerraformDotnet.Hcl.Evaluation.HclValue!>? args = null) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Evaluation.HclValue.WrapObject(System.Collections.ObjectModel.ReadOnlyDictionary<string!, TerraformDotnet.Hcl.Evaluation.HclValue!>! entries) -> TerraformDotnet.Hcl.Evaluation.HclValue!
+static TerraformDotnet.Hcl.Nodes.HclExpression.Parse(string! expression) -> TerraformDotnet.Hcl.Nodes.HclExpression!
+static TerraformDotnet.Hcl.Nodes.HclExpression.TryParse(string? expression, out TerraformDotnet.Hcl.Nodes.HclExpression? result) -> bool
 static TerraformDotnet.Hcl.Nodes.HclFile.Load(System.ReadOnlySpan<byte> hclData) -> TerraformDotnet.Hcl.Nodes.HclFile!
 static TerraformDotnet.Hcl.Nodes.HclFileParser.Parse(System.ReadOnlySpan<byte> hclData, bool preserveComments = true) -> TerraformDotnet.Hcl.Nodes.HclFile!
 static TerraformDotnet.Hcl.Writer.HclWriterOptions.Default.get -> TerraformDotnet.Hcl.Writer.HclWriterOptions!
@@ -134,9 +137,25 @@ TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.HclEvaluationContext() -> vo
 TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.Parent.get -> TerraformDotnet.Hcl.Evaluation.HclEvaluationContext?
 TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.SetVariable(string! name, TerraformDotnet.Hcl.Evaluation.HclValue! value) -> void
 TerraformDotnet.Hcl.Evaluation.HclEvaluationContext.TryGetVariable(string! name, out TerraformDotnet.Hcl.Evaluation.HclValue! value) -> bool
+TerraformDotnet.Hcl.Evaluation.HclEvaluationLimitException
+TerraformDotnet.Hcl.Evaluation.HclEvaluationLimitException.HclEvaluationLimitException(string! message) -> void
 TerraformDotnet.Hcl.Evaluation.HclEvaluator
 TerraformDotnet.Hcl.Evaluation.HclEvaluator.Evaluate(TerraformDotnet.Hcl.Nodes.HclExpression! expression, TerraformDotnet.Hcl.Evaluation.HclEvaluationContext! context) -> TerraformDotnet.Hcl.Evaluation.HclValue!
 TerraformDotnet.Hcl.Evaluation.HclEvaluator.HclEvaluator() -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluator.HclEvaluator(TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions! options) -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.FunctionResolver.get -> TerraformDotnet.Hcl.Evaluation.IHclFunctionResolver?
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.FunctionResolver.init -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.HclEvaluatorOptions() -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.MaxDepth.get -> int
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.MaxDepth.init -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.MaxIterations.get -> int
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.MaxIterations.init -> void
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.TreatUndefinedVariablesAsUnknown.get -> bool
+TerraformDotnet.Hcl.Evaluation.HclEvaluatorOptions.TreatUndefinedVariablesAsUnknown.init -> void
+TerraformDotnet.Hcl.Evaluation.HclFunctionException
+TerraformDotnet.Hcl.Evaluation.HclFunctionException.FunctionName.get -> string!
+TerraformDotnet.Hcl.Evaluation.HclFunctionException.HclFunctionException(string! functionName, string! message) -> void
 TerraformDotnet.Hcl.Evaluation.HclUnresolvableException
 TerraformDotnet.Hcl.Evaluation.HclUnresolvableException.HclUnresolvableException(string! message) -> void
 TerraformDotnet.Hcl.Evaluation.HclUnresolvableException.HclUnresolvableException(string! message, TerraformDotnet.Hcl.Common.Mark position) -> void
@@ -162,6 +181,8 @@ TerraformDotnet.Hcl.Evaluation.HclValueType.Object = 5 -> TerraformDotnet.Hcl.Ev
 TerraformDotnet.Hcl.Evaluation.HclValueType.String = 0 -> TerraformDotnet.Hcl.Evaluation.HclValueType
 TerraformDotnet.Hcl.Evaluation.HclValueType.Tuple = 4 -> TerraformDotnet.Hcl.Evaluation.HclValueType
 TerraformDotnet.Hcl.Evaluation.HclValueType.Unknown = 6 -> TerraformDotnet.Hcl.Evaluation.HclValueType
+TerraformDotnet.Hcl.Evaluation.IHclFunctionResolver
+TerraformDotnet.Hcl.Evaluation.IHclFunctionResolver.Invoke(string! name, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Hcl.Evaluation.HclValue!>! arguments) -> TerraformDotnet.Hcl.Evaluation.HclValue?
 TerraformDotnet.Hcl.Exceptions.HclException
 TerraformDotnet.Hcl.Exceptions.HclException.HclException(string! message) -> void
 TerraformDotnet.Hcl.Exceptions.HclException.HclException(string! message, System.Exception! innerException) -> void

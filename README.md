@@ -3,7 +3,7 @@
 A .NET toolkit for working with Terraform — parse HCL, load modules, inspect variables, and generate Terraform code.
 
 [![NuGet](https://img.shields.io/nuget/v/TerraformDotnet.svg)](https://www.nuget.org/packages/TerraformDotnet)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Built with GitHub Copilot](https://img.shields.io/badge/Built%20with-GitHub%20Copilot%20%C2%B7%20Claude%20Opus%204.6-8957e5?logo=githubcopilot)](https://github.com/features/copilot)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Built with GitHub Copilot](https://img.shields.io/badge/Built%20with-GitHub%20Copilot-8957e5?logo=githubcopilot)](https://github.com/features/copilot)
 
 ## Packages
 
@@ -168,9 +168,11 @@ writer.Flush();
 | **Reader** | `TerraformDotnet.Hcl.Reader` | `ref struct` tokenizer — zero-copy, pull-based |
 | **Nodes** | `TerraformDotnet.Hcl.Nodes` | AST model with visitor pattern and `DeepClone()` |
 | **Writer** | `TerraformDotnet.Hcl.Writer` | Forward-only writer producing `terraform fmt` output |
-| **Evaluation** | `TerraformDotnet.Hcl.Evaluation` | Variable resolution engine |
+| **Evaluation** | `TerraformDotnet.Hcl.Evaluation` | Expression evaluator with pluggable function resolver |
 | **Module** | `TerraformDotnet.Module` | Terraform module loader and model |
 | **Emit** | `TerraformDotnet.Emit` | Module call builder and code emitter |
+| **Functions** | `TerraformDotnet.Evaluation` | Terraform function library and type conversion |
+| **Validation** | `TerraformDotnet.Validation` | Variable constraint extraction and validation evaluation |
 
 See [docs/hcl.md](docs/hcl.md) and [docs/terraformdotnet.md](docs/terraformdotnet.md) for detailed documentation.
 

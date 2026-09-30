@@ -1,4 +1,5 @@
 using System.Globalization;
+using TerraformDotnet.Hcl.Exceptions;
 using TerraformDotnet.Hcl.Nodes;
 
 namespace TerraformDotnet.Hcl.Evaluation;
@@ -14,9 +15,20 @@ namespace TerraformDotnet.Hcl.Evaluation;
 /// expressions, and template interpolation.
 /// </para>
 /// <para>
-/// Function calls are NOT evaluated — they return <see cref="HclValue.Unknown(string, IList{HclValue}?)"/>
-/// with the function name and resolved arguments preserved.
+/// Function calls are delegated to the <see cref="IHclFunctionResolver"/> configured through
+/// <see cref="HclEvaluatorOptions"/>. Without a resolver — or when the resolver does not support
+/// a function — they return <see cref="HclValue.Unknown(string, IList{HclValue}?)"/> with the
+/// function name and resolved arguments preserved. <c>can</c> and <c>try</c> are always evaluated
+/// by the evaluator itself because they need lazy argument evaluation.
 /// </para>
+/// <para>
+/// Unknown values propagate using three-valued (Kleene) logic: <c>false &amp;&amp; unknown</c> is
+/// <c>false</c>, <c>true || unknown</c> is <c>true</c>, everything else involving an unknown is
+/// unknown. <c>&amp;&amp;</c> and <c>||</c> short-circuit. Operands are converted like Terraform does
+/// (<c>"5" &lt; 10</c> compares numbers, <c>"true" &amp;&amp; x</c> is a boolean operation) except for
+/// equality, which never converts.
+/// </para>
+/// <para>An instance is not thread-safe; use one evaluator per thread.</para>
 /// </remarks>
 /// <example>
 /// <code>
@@ -33,10 +45,24 @@ namespace TerraformDotnet.Hcl.Evaluation;
 /// </example>
 public sealed class HclEvaluator
 {
-    /// <summary>Maximum recursion depth to prevent stack overflow on deeply nested expressions.</summary>
-    private const int MaxDepth = 128;
-
+    private readonly HclEvaluatorOptions _options;
     private int _depth;
+    private int _iterations;
+
+    /// <summary>Initializes a new evaluator with default options (no function resolver).</summary>
+    public HclEvaluator()
+        : this(new HclEvaluatorOptions())
+    {
+    }
+
+    /// <summary>Initializes a new evaluator with the given options.</summary>
+    /// <param name="options">The evaluator options.</param>
+    public HclEvaluator(HclEvaluatorOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        _options = options;
+    }
 
     /// <summary>
     /// Evaluates an HCL expression to a resolved value using the given evaluation context.
@@ -45,13 +71,15 @@ public sealed class HclEvaluator
     /// <param name="context">The variable bindings available during evaluation.</param>
     /// <returns>The resolved <see cref="HclValue"/>.</returns>
     /// <exception cref="HclUnresolvableException">Thrown when a referenced variable is not found.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when an expression type is not supported or evaluation exceeds maximum depth.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when an expression type is not supported or an operation is applied to unsuitable operands.</exception>
+    /// <exception cref="HclEvaluationLimitException">Thrown when evaluation exceeds the configured depth or iteration limit.</exception>
     public HclValue Evaluate(HclExpression expression, HclEvaluationContext context)
     {
         ArgumentNullException.ThrowIfNull(expression);
         ArgumentNullException.ThrowIfNull(context);
 
         _depth = 0;
+        _iterations = 0;
 
         return EvaluateExpression(expression, context);
     }
@@ -60,17 +88,17 @@ public sealed class HclEvaluator
     private HclValue EvaluateExpression(HclExpression expression, HclEvaluationContext context)
     {
         _depth++;
-        if (_depth > MaxDepth)
+        if (_depth > _options.MaxDepth)
         {
-            throw new InvalidOperationException(
-                $"Expression evaluation exceeded maximum recursion depth of {MaxDepth}.");
+            throw new HclEvaluationLimitException(
+                $"Expression evaluation exceeded maximum recursion depth of {_options.MaxDepth}.");
         }
 
         try
         {
             return expression switch
             {
-                HclLiteralExpression literal => EvaluateLiteral(literal),
+                HclLiteralExpression literal => EvaluateLiteral(literal, context),
                 HclVariableExpression variable => EvaluateVariable(variable, context),
                 HclBinaryExpression binary => EvaluateBinary(binary, context),
                 HclUnaryExpression unary => EvaluateUnary(unary, context),
@@ -95,7 +123,7 @@ public sealed class HclEvaluator
     }
 
     /// <summary>Resolves a literal expression to a typed value.</summary>
-    private static HclValue EvaluateLiteral(HclLiteralExpression literal) => literal.Kind switch
+    private HclValue EvaluateLiteral(HclLiteralExpression literal, HclEvaluationContext context) => literal.Kind switch
     {
         HclLiteralKind.Null => HclValue.Null,
         HclLiteralKind.Bool => HclValue.FromBool(
@@ -103,18 +131,68 @@ public sealed class HclEvaluator
             literal.Value.Equals("true", StringComparison.OrdinalIgnoreCase)),
         HclLiteralKind.Number => HclValue.FromNumber(
             double.Parse(literal.Value!, CultureInfo.InvariantCulture)),
-        HclLiteralKind.String => HclValue.FromString(literal.Value ?? string.Empty),
+        HclLiteralKind.String => literal.Value is { } text && HclStringTemplate.MayBeTemplate(text)
+            ? EvaluateStringTemplate(literal, context)
+            : HclValue.FromString(literal.Value ?? string.Empty),
         _ => throw new InvalidOperationException($"Unknown literal kind: {literal.Kind}"),
     };
 
+    /// <summary>
+    /// Evaluates a string containing <c>${...}</c> interpolations. A string that consists of a single
+    /// interpolation yields the interpolated value unchanged (not converted to a string), like Terraform.
+    /// </summary>
+    private HclValue EvaluateStringTemplate(HclLiteralExpression literal, HclEvaluationContext context)
+    {
+        var template = HclStringTemplate.For(literal);
+        if (template is null)
+        {
+            return HclValue.Unknown("template");
+        }
+
+        if (template.Parts.Count == 1 && template.Parts[0] is HclExpression single)
+        {
+            return EvaluateExpression(single, context);
+        }
+
+        var builder = new System.Text.StringBuilder();
+        foreach (var part in template.Parts)
+        {
+            if (part is string text)
+            {
+                builder.Append(text);
+                continue;
+            }
+
+            var value = EvaluateExpression((HclExpression)part, context);
+            switch (value.Type)
+            {
+                case HclValueType.Unknown:
+                    return value;
+                case HclValueType.Null or HclValueType.Tuple or HclValueType.Object:
+                    throw new InvalidOperationException(
+                        $"Cannot include a {value.Type} value in a string template.");
+                default:
+                    builder.Append(value.ToHclString());
+                    break;
+            }
+        }
+
+        return HclValue.FromString(builder.ToString());
+    }
+
     /// <summary>Looks up a variable reference in the evaluation context.</summary>
-    private static HclValue EvaluateVariable(
+    private HclValue EvaluateVariable(
         HclVariableExpression variable,
         HclEvaluationContext context)
     {
         if (context.TryGetVariable(variable.Name, out var value))
         {
             return value;
+        }
+
+        if (_options.TreatUndefinedVariablesAsUnknown)
+        {
+            return HclValue.Unknown(variable.Name);
         }
 
         throw new HclUnresolvableException(
@@ -126,6 +204,11 @@ public sealed class HclEvaluator
     /// <summary>Evaluates a binary operation on two resolved operands.</summary>
     private HclValue EvaluateBinary(HclBinaryExpression binary, HclEvaluationContext context)
     {
+        if (binary.Operator is HclBinaryOperator.And or HclBinaryOperator.Or)
+        {
+            return EvaluateLogical(binary, context);
+        }
+
         var left = EvaluateExpression(binary.Left, context);
         var right = EvaluateExpression(binary.Right, context);
 
@@ -146,47 +229,122 @@ public sealed class HclEvaluator
             HclBinaryOperator.Subtract => EvaluateArithmetic(left, right, (a, b) => a - b),
             HclBinaryOperator.Multiply => EvaluateArithmetic(left, right, (a, b) => a * b),
             HclBinaryOperator.Divide => EvaluateArithmetic(left, right, (a, b) => a / b),
-            HclBinaryOperator.Modulo => EvaluateArithmetic(left, right, (a, b) => a % b),
+            HclBinaryOperator.Modulo => EvaluateModulo(left, right),
             HclBinaryOperator.Equal => HclValue.FromBool(left.Equals(right)),
             HclBinaryOperator.NotEqual => HclValue.FromBool(!left.Equals(right)),
             HclBinaryOperator.LessThan => EvaluateComparison(left, right, (a, b) => a < b),
             HclBinaryOperator.GreaterThan => EvaluateComparison(left, right, (a, b) => a > b),
             HclBinaryOperator.LessEqual => EvaluateComparison(left, right, (a, b) => a <= b),
             HclBinaryOperator.GreaterEqual => EvaluateComparison(left, right, (a, b) => a >= b),
-            HclBinaryOperator.And => HclValue.FromBool(left.IsTruthy && right.IsTruthy),
-            HclBinaryOperator.Or => HclValue.FromBool(left.IsTruthy || right.IsTruthy),
             _ => throw new InvalidOperationException($"Unknown binary operator: {binary.Operator}"),
         };
     }
 
-    /// <summary>Evaluates an arithmetic operation ensuring both operands are numeric.</summary>
+    /// <summary>
+    /// Evaluates <c>&amp;&amp;</c> and <c>||</c> with short-circuiting and three-valued logic.
+    /// </summary>
+    /// <remarks>
+    /// A definite short-circuit value (<c>false</c> for and, <c>true</c> for or) on either side decides
+    /// the result even when the other side is unknown; this is what keeps guards such as
+    /// <c>var.x != null &amp;&amp; length(var.x) &gt; 0</c> evaluable.
+    /// </remarks>
+    private HclValue EvaluateLogical(HclBinaryExpression binary, HclEvaluationContext context)
+    {
+        var isAnd = binary.Operator == HclBinaryOperator.And;
+        var decisive = !isAnd;
+
+        var left = ToBoolOperand(EvaluateExpression(binary.Left, context), binary.Operator);
+        if (left.Type == HclValueType.Bool && left.BoolValue == decisive)
+        {
+            return left;
+        }
+
+        var right = ToBoolOperand(EvaluateExpression(binary.Right, context), binary.Operator);
+        if (right.Type == HclValueType.Bool && right.BoolValue == decisive)
+        {
+            return right;
+        }
+
+        if (left.Type == HclValueType.Unknown)
+        {
+            return left;
+        }
+
+        if (right.Type == HclValueType.Unknown)
+        {
+            return right;
+        }
+
+        return HclValue.FromBool(!decisive);
+    }
+
+    /// <summary>Converts a logical operand to a boolean, passing unknown values through.</summary>
+    private static HclValue ToBoolOperand(HclValue value, object operation)
+    {
+        return value.Type switch
+        {
+            HclValueType.Bool or HclValueType.Unknown => value,
+            HclValueType.String when value.StringValue == "true" => HclValue.True,
+            HclValueType.String when value.StringValue == "false" => HclValue.False,
+            _ => throw new InvalidOperationException(
+                $"Cannot apply {operation} to {value.Type} value; a boolean is required."),
+        };
+    }
+
+    /// <summary>Converts an arithmetic or comparison operand to a number, parsing numeric strings.</summary>
+    private static double ToNumberOperand(HclValue value, string operation)
+    {
+        if (value.Type == HclValueType.Number)
+        {
+            return value.NumberValue;
+        }
+
+        if (value.Type == HclValueType.String
+            && double.TryParse(
+                value.StringValue,
+                NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint | NumberStyles.AllowExponent,
+                CultureInfo.InvariantCulture,
+                out var parsed)
+            && double.IsFinite(parsed))
+        {
+            return parsed;
+        }
+
+        throw new InvalidOperationException($"Cannot {operation}: {value.Type} value is not a number.");
+    }
+
+    /// <summary>Evaluates an arithmetic operation, converting numeric strings.</summary>
     private static HclValue EvaluateArithmetic(
         HclValue left,
         HclValue right,
         Func<double, double, double> operation)
     {
-        if (left.Type != HclValueType.Number || right.Type != HclValueType.Number)
-        {
-            throw new InvalidOperationException(
-                $"Cannot perform arithmetic on {left.Type} and {right.Type} values.");
-        }
-
-        return HclValue.FromNumber(operation(left.NumberValue, right.NumberValue));
+        return HclValue.FromNumber(operation(
+            ToNumberOperand(left, "perform arithmetic"),
+            ToNumberOperand(right, "perform arithmetic")));
     }
 
-    /// <summary>Evaluates a comparison operation ensuring both operands are numeric.</summary>
+    /// <summary>Evaluates a modulo operation; a zero divisor is an evaluation error.</summary>
+    private static HclValue EvaluateModulo(HclValue left, HclValue right)
+    {
+        var divisor = ToNumberOperand(right, "perform arithmetic");
+        if (divisor == 0)
+        {
+            throw new InvalidOperationException("Cannot perform modulo: division by zero.");
+        }
+
+        return HclValue.FromNumber(ToNumberOperand(left, "perform arithmetic") % divisor);
+    }
+
+    /// <summary>Evaluates a comparison operation, converting numeric strings.</summary>
     private static HclValue EvaluateComparison(
         HclValue left,
         HclValue right,
         Func<double, double, bool> comparison)
     {
-        if (left.Type != HclValueType.Number || right.Type != HclValueType.Number)
-        {
-            throw new InvalidOperationException(
-                $"Cannot compare {left.Type} and {right.Type} values.");
-        }
-
-        return HclValue.FromBool(comparison(left.NumberValue, right.NumberValue));
+        return HclValue.FromBool(comparison(
+            ToNumberOperand(left, "compare"),
+            ToNumberOperand(right, "compare")));
     }
 
     /// <summary>Evaluates a unary operation (negation or logical not).</summary>
@@ -201,14 +359,8 @@ public sealed class HclEvaluator
 
         return unary.Operator switch
         {
-            HclUnaryOperator.Negate when operand.Type == HclValueType.Number =>
-                HclValue.FromNumber(-operand.NumberValue),
-            HclUnaryOperator.Not when operand.Type == HclValueType.Bool =>
-                HclValue.FromBool(!operand.BoolValue),
-            HclUnaryOperator.Negate =>
-                throw new InvalidOperationException($"Cannot negate {operand.Type} value."),
-            HclUnaryOperator.Not =>
-                throw new InvalidOperationException($"Cannot apply logical not to {operand.Type} value."),
+            HclUnaryOperator.Negate => HclValue.FromNumber(-ToNumberOperand(operand, "negate")),
+            HclUnaryOperator.Not => HclValue.FromBool(!ToBoolOperand(operand, unary.Operator).BoolValue),
             _ => throw new InvalidOperationException($"Unknown unary operator: {unary.Operator}"),
         };
     }
@@ -218,34 +370,130 @@ public sealed class HclEvaluator
         HclConditionalExpression conditional,
         HclEvaluationContext context)
     {
-        var condition = EvaluateExpression(conditional.Condition, context);
+        var condition = ToBoolOperand(EvaluateExpression(conditional.Condition, context), "the conditional operator");
 
         if (condition.Type == HclValueType.Unknown)
         {
             return condition;
         }
 
-        return condition.IsTruthy
+        return condition.BoolValue
             ? EvaluateExpression(conditional.TrueResult, context)
             : EvaluateExpression(conditional.FalseResult, context);
     }
 
     /// <summary>
-    /// Function calls are not evaluated — they return <see cref="HclValueType.Unknown"/>
-    /// with the function name and resolved arguments preserved.
+    /// Evaluates a function call. <c>can</c> and <c>try</c> are handled here (they need lazy arguments);
+    /// everything else goes to the configured <see cref="IHclFunctionResolver"/>, and stays
+    /// <see cref="HclValueType.Unknown"/> when there is none, when an argument is unknown, or when the
+    /// resolver does not support the function.
     /// </summary>
     private HclValue EvaluateFunction(
         HclFunctionCallExpression function,
         HclEvaluationContext context)
     {
+        if (!function.ExpandFinalArgument)
+        {
+            if (function.Name == "can" && function.Arguments.Count == 1)
+            {
+                return EvaluateCan(function.Arguments[0], context);
+            }
+
+            if (function.Name == "try" && function.Arguments.Count >= 1)
+            {
+                return EvaluateTry(function.Arguments, context);
+            }
+        }
+
         var args = new List<HclValue>(function.Arguments.Count);
         foreach (var arg in function.Arguments)
         {
             args.Add(EvaluateExpression(arg, context));
         }
 
-        return HclValue.Unknown(function.Name, args);
+        if (function.ExpandFinalArgument && args.Count > 0)
+        {
+            var last = args[^1];
+            if (last.Type == HclValueType.Tuple)
+            {
+                args.RemoveAt(args.Count - 1);
+                args.AddRange(last.TupleValue);
+            }
+            else if (last.Type != HclValueType.Unknown)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot expand a {last.Type} value into the arguments of '{function.Name}'; a tuple is required.");
+            }
+        }
+
+        if (_options.FunctionResolver is null || ContainsUnknown(args))
+        {
+            return HclValue.Unknown(function.Name, args);
+        }
+
+        return _options.FunctionResolver.Invoke(function.Name, args)
+            ?? HclValue.Unknown(function.Name, args);
     }
+
+    private static bool ContainsUnknown(List<HclValue> values)
+    {
+        foreach (var value in values)
+        {
+            if (value.Type == HclValueType.Unknown)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary><c>can(expr)</c>: <c>true</c> when the expression evaluates without error.</summary>
+    private HclValue EvaluateCan(HclExpression argument, HclEvaluationContext context)
+    {
+        try
+        {
+            var value = EvaluateExpression(argument, context);
+
+            return value.Type == HclValueType.Unknown ? value : HclValue.True;
+        }
+        catch (Exception ex) when (IsRecoverableEvaluationError(ex))
+        {
+            return HclValue.False;
+        }
+    }
+
+    /// <summary><c>try(a, b, …)</c>: the first argument that evaluates without error.</summary>
+    private HclValue EvaluateTry(List<HclExpression> arguments, HclEvaluationContext context)
+    {
+        Exception? lastError = null;
+        foreach (var argument in arguments)
+        {
+            try
+            {
+                return EvaluateExpression(argument, context);
+            }
+            catch (Exception ex) when (IsRecoverableEvaluationError(ex))
+            {
+                lastError = ex;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"All arguments of try() failed. Last error: {lastError?.Message}", lastError);
+    }
+
+    /// <summary>
+    /// Determines whether an exception is an ordinary evaluation error that <c>can</c>/<c>try</c> may absorb.
+    /// Limit violations are excluded so an aborted evaluation is never disguised as a normal result.
+    /// </summary>
+    private static bool IsRecoverableEvaluationError(Exception ex) => ex switch
+    {
+        HclEvaluationLimitException => false,
+        InvalidOperationException or HclException or ArgumentException or FormatException
+            or OverflowException or KeyNotFoundException or InvalidCastException => true,
+        _ => false,
+    };
 
     /// <summary>Constructs a tuple value from the resolved elements.</summary>
     private HclValue EvaluateTuple(HclTupleExpression tuple, HclEvaluationContext context)
@@ -300,7 +548,7 @@ public sealed class HclEvaluator
             entries[keyStr] = value;
         }
 
-        return HclValue.FromObject(entries);
+        return HclValue.FromOwnedObject(entries);
     }
 
     /// <summary>Evaluates a for expression, producing either a tuple or object result.</summary>
@@ -321,6 +569,35 @@ public sealed class HclEvaluator
         return EvaluateForTuple(forExpr, collection, context);
     }
 
+    /// <summary>
+    /// Evaluates the optional <c>if</c> clause of a for expression.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> to keep the element, <c>false</c> to skip it, or the unknown value when the
+    /// condition cannot be decided (which makes the whole for expression unknown).
+    /// </returns>
+    private bool? EvaluateForCondition(
+        HclForExpression forExpr,
+        HclEvaluationContext childCtx,
+        out HclValue unknown)
+    {
+        unknown = HclValue.Null;
+        if (forExpr.Condition is null)
+        {
+            return true;
+        }
+
+        var condition = ToBoolOperand(EvaluateExpression(forExpr.Condition, childCtx), "the for expression condition");
+        if (condition.Type == HclValueType.Unknown)
+        {
+            unknown = condition;
+
+            return null;
+        }
+
+        return condition.BoolValue;
+    }
+
     /// <summary>Evaluates a for-tuple expression: <c>[for v in list : expr]</c></summary>
     private HclValue EvaluateForTuple(
         HclForExpression forExpr,
@@ -329,20 +606,27 @@ public sealed class HclEvaluator
     {
         var result = new List<HclValue>();
 
-        IterateCollection(collection, forExpr, context, (childCtx) =>
+        foreach (var childCtx in IterateCollection(collection, forExpr, context))
         {
-            if (forExpr.Condition is not null)
+            var keep = EvaluateForCondition(forExpr, childCtx, out var unknownCondition);
+            if (keep is null)
             {
-                var condVal = EvaluateExpression(forExpr.Condition, childCtx);
-                if (condVal.Type == HclValueType.Unknown || !condVal.IsTruthy)
-                {
-                    return;
-                }
+                return unknownCondition;
+            }
+
+            if (keep == false)
+            {
+                continue;
             }
 
             var value = EvaluateExpression(forExpr.ValueExpression, childCtx);
+            if (value.Type == HclValueType.Unknown)
+            {
+                return value;
+            }
+
             result.Add(value);
-        });
+        }
 
         return HclValue.FromTuple(result);
     }
@@ -353,56 +637,43 @@ public sealed class HclEvaluator
         HclValue collection,
         HclEvaluationContext context)
     {
-        if (forExpr.IsGrouped)
-        {
-            return EvaluateForObjectGrouped(forExpr, collection, context);
-        }
-
+        var grouped = forExpr.IsGrouped;
         var result = new Dictionary<string, HclValue>(StringComparer.Ordinal);
-
-        IterateCollection(collection, forExpr, context, (childCtx) =>
-        {
-            if (forExpr.Condition is not null)
-            {
-                var condVal = EvaluateExpression(forExpr.Condition, childCtx);
-                if (condVal.Type == HclValueType.Unknown || !condVal.IsTruthy)
-                {
-                    return;
-                }
-            }
-
-            var keyVal = EvaluateExpression(forExpr.KeyExpression!, childCtx);
-            var valueVal = EvaluateExpression(forExpr.ValueExpression, childCtx);
-
-            result[keyVal.ToHclString()] = valueVal;
-        });
-
-        return HclValue.FromObject(result);
-    }
-
-    /// <summary>Evaluates a grouped for-object expression: <c>{for k, v in map : k =&gt; v...}</c></summary>
-    private HclValue EvaluateForObjectGrouped(
-        HclForExpression forExpr,
-        HclValue collection,
-        HclEvaluationContext context)
-    {
         var groups = new Dictionary<string, List<HclValue>>(StringComparer.Ordinal);
 
-        IterateCollection(collection, forExpr, context, (childCtx) =>
+        foreach (var childCtx in IterateCollection(collection, forExpr, context))
         {
-            if (forExpr.Condition is not null)
+            var keep = EvaluateForCondition(forExpr, childCtx, out var unknownCondition);
+            if (keep is null)
             {
-                var condVal = EvaluateExpression(forExpr.Condition, childCtx);
-                if (condVal.Type == HclValueType.Unknown || !condVal.IsTruthy)
-                {
-                    return;
-                }
+                return unknownCondition;
+            }
+
+            if (keep == false)
+            {
+                continue;
             }
 
             var keyVal = EvaluateExpression(forExpr.KeyExpression!, childCtx);
+            if (keyVal.Type == HclValueType.Unknown)
+            {
+                return keyVal;
+            }
+
             var valueVal = EvaluateExpression(forExpr.ValueExpression, childCtx);
+            if (valueVal.Type == HclValueType.Unknown)
+            {
+                return valueVal;
+            }
 
             var key = keyVal.ToHclString();
+            if (!grouped)
+            {
+                result[key] = valueVal;
+
+                continue;
+            }
+
             if (!groups.TryGetValue(key, out var list))
             {
                 list = [];
@@ -410,32 +681,36 @@ public sealed class HclEvaluator
             }
 
             list.Add(valueVal);
-        });
+        }
 
-        var result = new Dictionary<string, HclValue>(StringComparer.Ordinal);
+        if (!grouped)
+        {
+            return HclValue.FromOwnedObject(result);
+        }
+
         foreach (var kvp in groups)
         {
             result[kvp.Key] = HclValue.FromTuple(kvp.Value);
         }
 
-        return HclValue.FromObject(result);
+        return HclValue.FromOwnedObject(result);
     }
 
     /// <summary>
-    /// Iterates over a collection (tuple or object) and invokes a callback for each element,
-    /// binding the iteration variables in a child scope.
+    /// Iterates over a collection (tuple or object), yielding a child scope with the iteration
+    /// variables bound for each element. Enforces <see cref="HclEvaluatorOptions.MaxIterations"/>.
     /// </summary>
-    private static void IterateCollection(
+    private IEnumerable<HclEvaluationContext> IterateCollection(
         HclValue collection,
         HclForExpression forExpr,
-        HclEvaluationContext context,
-        Action<HclEvaluationContext> callback)
+        HclEvaluationContext context)
     {
         switch (collection.Type)
         {
             case HclValueType.Tuple:
                 for (int i = 0; i < collection.TupleValue.Count; i++)
                 {
+                    CountIteration();
                     var childCtx = context.CreateChildScope();
                     // KeyVariable is the iteration variable for tuples (index not bound unless ValueVariable is set)
                     if (forExpr.ValueVariable is not null)
@@ -448,14 +723,16 @@ public sealed class HclEvaluator
                         childCtx.SetVariable(forExpr.KeyVariable, collection.TupleValue[i]);
                     }
 
-                    callback(childCtx);
+                    yield return childCtx;
                 }
 
                 break;
 
             case HclValueType.Object:
-                foreach (var kvp in collection.ObjectValue)
+                // Terraform iterates object and map attributes in lexical key order.
+                foreach (var kvp in collection.ObjectValue.OrderBy(pair => pair.Key, StringComparer.Ordinal))
                 {
+                    CountIteration();
                     var childCtx = context.CreateChildScope();
                     if (forExpr.ValueVariable is not null)
                     {
@@ -467,7 +744,7 @@ public sealed class HclEvaluator
                         childCtx.SetVariable(forExpr.KeyVariable, kvp.Value);
                     }
 
-                    callback(childCtx);
+                    yield return childCtx;
                 }
 
                 break;
@@ -475,6 +752,16 @@ public sealed class HclEvaluator
             default:
                 throw new InvalidOperationException(
                     $"Cannot iterate over {collection.Type} value in for expression.");
+        }
+    }
+
+    /// <summary>Counts one loop iteration and aborts when the configured limit is exceeded.</summary>
+    private void CountIteration()
+    {
+        if (++_iterations > _options.MaxIterations)
+        {
+            throw new HclEvaluationLimitException(
+                $"Expression evaluation exceeded the maximum of {_options.MaxIterations} loop iterations.");
         }
     }
 
@@ -494,19 +781,39 @@ public sealed class HclEvaluator
             return indexValue;
         }
 
-        return collection.Type switch
+        return IndexValue(collection, indexValue, index);
+    }
+
+    /// <summary>
+    /// Indexes an already evaluated collection. Tuple indexes may be numeric strings
+    /// (Terraform converts them); out-of-range and missing keys are evaluation errors.
+    /// </summary>
+    private static HclValue IndexValue(HclValue collection, HclValue indexValue, HclExpression at)
+    {
+        switch (collection.Type)
         {
-            HclValueType.Tuple when indexValue.Type == HclValueType.Number =>
-                collection.TupleValue[(int)indexValue.NumberValue],
-            HclValueType.Object when indexValue.Type == HclValueType.String =>
-                collection.ObjectValue.TryGetValue(indexValue.StringValue, out var val)
+            case HclValueType.Tuple:
+                var position = ToNumberOperand(indexValue, "index a tuple");
+                if (position != Math.Floor(position) || position < 0 || position >= collection.TupleValue.Count)
+                {
+                    throw new HclUnresolvableException(
+                        $"Index {indexValue.ToHclString()} is out of range for a tuple of {collection.TupleValue.Count} element(s).",
+                        at.Start);
+                }
+
+                return collection.TupleValue[(int)position];
+
+            case HclValueType.Object when indexValue.Type == HclValueType.String:
+                return collection.ObjectValue.TryGetValue(indexValue.StringValue, out var val)
                     ? val
                     : throw new HclUnresolvableException(
                         $"Key '{indexValue.StringValue}' not found in object.",
-                        index.Start),
-            _ => throw new InvalidOperationException(
-                $"Cannot index {collection.Type} with {indexValue.Type}."),
-        };
+                        at.Start);
+
+            default:
+                throw new InvalidOperationException(
+                    $"Cannot index {collection.Type} with {indexValue.Type}.");
+        }
     }
 
     /// <summary>Evaluates an attribute access expression: <c>source.name</c></summary>
@@ -519,6 +826,12 @@ public sealed class HclEvaluator
         if (source.Type == HclValueType.Unknown)
         {
             return source;
+        }
+
+        // Legacy tuple index syntax: list.0
+        if (source.Type == HclValueType.Tuple && int.TryParse(access.Name, NumberStyles.None, CultureInfo.InvariantCulture, out var legacyIndex))
+        {
+            return IndexValue(source, HclValue.FromNumber(legacyIndex), access);
         }
 
         if (source.Type != HclValueType.Object)
@@ -538,7 +851,11 @@ public sealed class HclEvaluator
             access.Start);
     }
 
-    /// <summary>Evaluates a splat expression: <c>source[*].attr</c> or <c>source.*.attr</c></summary>
+    /// <summary>
+    /// Evaluates a splat expression: <c>source[*].attr</c> or <c>source.*.attr</c>.
+    /// Like Terraform, a null source yields an empty tuple and a single non-tuple value is treated
+    /// as a one-element tuple.
+    /// </summary>
     private HclValue EvaluateSplat(HclSplatExpression splat, HclEvaluationContext context)
     {
         var source = EvaluateExpression(splat.Source, context);
@@ -548,14 +865,15 @@ public sealed class HclEvaluator
             return source;
         }
 
-        if (source.Type != HclValueType.Tuple)
+        IReadOnlyList<HclValue> elements = source.Type switch
         {
-            throw new InvalidOperationException(
-                $"Cannot apply splat to {source.Type} value. Expected a tuple.");
-        }
+            HclValueType.Null => [],
+            HclValueType.Tuple => source.TupleValue,
+            _ => [source],
+        };
 
-        var results = new List<HclValue>(source.TupleValue.Count);
-        foreach (var element in source.TupleValue)
+        var results = new List<HclValue>(elements.Count);
+        foreach (var element in elements)
         {
             var current = element;
             foreach (var traversal in splat.Traversal)
@@ -574,23 +892,31 @@ public sealed class HclEvaluator
                                 attrAccess.Name,
                                 $"Attribute '{attrAccess.Name}' not found in splat traversal.",
                                 attrAccess.Start),
-                    HclIndexExpression idxExpr =>
-                        EvaluateIndex(
-                            new HclIndexExpression
-                            {
-                                Collection = WrapAsLiteralSource(current),
-                                Index = idxExpr.Index,
-                            },
-                            context),
+                    HclIndexExpression idxExpr => EvaluateSplatIndex(current, idxExpr, context),
                     _ => throw new InvalidOperationException(
                         $"Unsupported traversal type in splat: {traversal.GetType().Name}"),
                 };
+            }
+
+            if (current.Type == HclValueType.Unknown)
+            {
+                return current;
             }
 
             results.Add(current);
         }
 
         return HclValue.FromTuple(results);
+    }
+
+    /// <summary>Applies an index traversal step of a splat expression to one element.</summary>
+    private HclValue EvaluateSplatIndex(HclValue element, HclIndexExpression idxExpr, HclEvaluationContext context)
+    {
+        var indexValue = EvaluateExpression(idxExpr.Index, context);
+
+        return indexValue.Type == HclValueType.Unknown
+            ? indexValue
+            : IndexValue(element, indexValue, idxExpr);
     }
 
     /// <summary>Evaluates a template expression by resolving interpolations and concatenating parts.</summary>
@@ -628,24 +954,4 @@ public sealed class HclEvaluator
     {
         return EvaluateExpression(wrap.Wrapped, context);
     }
-
-    /// <summary>
-    /// Wraps an already-resolved value as a synthetic literal expression node,
-    /// used internally for splat index traversal.
-    /// </summary>
-    private static HclLiteralExpression WrapAsLiteralSource(HclValue value) => value.Type switch
-    {
-        HclValueType.String => new HclLiteralExpression
-        {
-            Value = value.StringValue,
-            Kind = HclLiteralKind.String,
-        },
-        HclValueType.Number => new HclLiteralExpression
-        {
-            Value = value.NumberValue.ToString(CultureInfo.InvariantCulture),
-            Kind = HclLiteralKind.Number,
-        },
-        _ => throw new InvalidOperationException(
-            $"Cannot wrap {value.Type} as a literal expression for splat traversal."),
-    };
 }

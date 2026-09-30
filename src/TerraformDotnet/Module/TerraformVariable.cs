@@ -26,16 +26,16 @@ public sealed class TerraformVariable
     /// <param name="description">The variable description.</param>
     /// <param name="defaultValue">The default value expression. <c>null</c> means the variable is required.</param>
     /// <param name="isSensitive">Whether the variable is marked <c>sensitive</c>.</param>
-    /// <param name="isNullable">Whether the variable is marked <c>nullable</c>.</param>
-    /// <param name="validation">The validation block, if any.</param>
+    /// <param name="isNullable">Whether the variable accepts <c>null</c>; Terraform defaults to <c>true</c>.</param>
+    /// <param name="validations">The validation blocks, in declaration order.</param>
     internal TerraformVariable(
         string name,
-        TerraformType? type = null,
-        string? description = null,
-        HclExpression? defaultValue = null,
-        bool isSensitive = false,
-        bool isNullable = false,
-        TerraformValidation? validation = null)
+        TerraformType? type,
+        string? description,
+        HclExpression? defaultValue,
+        bool isSensitive,
+        bool isNullable,
+        IReadOnlyList<TerraformValidation> validations)
     {
         Name = name;
         Type = type;
@@ -43,7 +43,7 @@ public sealed class TerraformVariable
         Default = defaultValue;
         IsSensitive = isSensitive;
         IsNullable = isNullable;
-        Validation = validation;
+        Validations = validations;
     }
 
     /// <summary>Gets the variable name.</summary>
@@ -88,9 +88,15 @@ public sealed class TerraformVariable
     /// <summary>Gets whether this variable is marked <c>sensitive</c>.</summary>
     public bool IsSensitive { get; }
 
-    /// <summary>Gets whether this variable is marked <c>nullable</c>.</summary>
+    /// <summary>
+    /// Gets whether the variable accepts <c>null</c>. Terraform's default is <c>true</c>, so this is
+    /// only <c>false</c> when the declaration says <c>nullable = false</c>.
+    /// </summary>
     public bool IsNullable { get; }
 
-    /// <summary>Gets the validation block, if any.</summary>
-    public TerraformValidation? Validation { get; }
+    /// <summary>
+    /// Gets all <c>validation</c> blocks in declaration order. Terraform allows several per variable
+    /// and every one of them must hold.
+    /// </summary>
+    public IReadOnlyList<TerraformValidation> Validations { get; }
 }

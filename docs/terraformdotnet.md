@@ -11,6 +11,8 @@ Load Terraform modules, inspect their structure, and generate module calling cod
   - [From inline content](#from-inline-content)
 - [Inspecting Module Structure](#inspecting-module-structure)
   - [Variables](#variables)
+  - [Variable validation constraints](#variable-validation-constraints)
+  - [Evaluating validations](#evaluating-validations)
   - [Type system](#type-system)
   - [Outputs](#outputs)
   - [Resources and data sources](#resources-and-data-sources)
@@ -141,8 +143,226 @@ Variable properties:
 | `IsOptional` | `bool` | `true` when default is set |
 | `HasSentinelDefault(sentinel)` | `bool` | `true` when default is a string matching the sentinel |
 | `IsSensitive` | `bool` | Marks sensitive values |
-| `IsNullable` | `bool` | Whether `null` is allowed |
-| `Validation` | `TerraformValidation?` | Validation rule with condition and error message |
+| `IsNullable` | `bool` | Whether `null` is allowed. Defaults to `true` like Terraform; only `nullable = false` turns it off |
+| `Validations` | `IReadOnlyList<TerraformValidation>` | All `validation` blocks in declaration order (Terraform allows several) |
+
+### Variable validation constraints
+
+`validation` blocks contain arbitrary Terraform expressions. `ConstraintExtractor` reads them **structurally** (it never
+evaluates them) and turns the common idioms into a small typed model that a UI can render safely:
+dropdowns for enums, min/max for ranges, and rules that make a variable required depending on other variables.
+
+```csharp
+var module = TerraformModule.LoadFromDirectory("./my-module");
+
+foreach (var variable in module.Variables)
+{
+    foreach (var constraint in ConstraintExtractor.Extract(variable, module))
+    {
+        switch (constraint)
+        {
+            case AllowedValuesConstraint allowed:
+                // condition = contains(["silver", "gold"], var.sla)  →  render a dropdown
+                Console.WriteLine($"{variable.Name}: one of {string.Join(", ", allowed.Values.Select(v => v.Value))}");
+                break;
+            case NumericRangeConstraint range:
+                Console.WriteLine($"{variable.Name}: {range.Min}..{range.Max}");
+                break;
+            case OpaqueConstraint opaque:
+                // Not understood: show opaque.ErrorMessage as help text and let Terraform enforce it.
+                Console.WriteLine($"{variable.Name}: {opaque.ErrorMessage}");
+                break;
+        }
+    }
+}
+```
+
+Pass the `module` so that `local.*` references (for example `contains(local.regions, var.region)`) can be resolved.
+`ConstraintExtractor.ExtractAll(module)` returns the constraints of every variable by name.
+
+Every validation block produces one or more constraints. Each keeps the block's `ErrorMessage` and the normalised
+expression text in `Source`. The constraints of different blocks are never merged.
+
+| Constraint | Recognised idioms |
+|------------|-------------------|
+| `AllowedValuesConstraint` | `contains([...], var.x)`, `var.x == "a" \|\| var.x == "b"`, `contains(local.list, var.x)`, `contains(keys(local.map), var.x)`, `contains(values({...}), var.x)` |
+| `DisallowedValuesConstraint` | `!contains([...], var.x)`, `var.x != "a" && var.x != "b"`, `!(var.x == "a" \|\| ...)` |
+| `NumericRangeConstraint` | `var.x >= 1 && var.x <= 35` (bounds can be inclusive or exclusive, and open on one side) |
+| `LengthConstraint` | `length(var.x) >= 3 && length(var.x) <= 24`, `length(var.x) > 0` |
+| `PatternConstraint` | `can(regex("^...$", var.x))`, `length(regexall("...", var.x)) > 0` |
+| `PrefixConstraint` / `SuffixConstraint` | `startswith(var.x, "app-")`, `endswith(var.x, "-prod")` |
+| `NotNullConstraint` | `var.x != null` |
+| `RequiredWhenConstraint` | `var.sla != "gold" \|\| var.x != null` (also written as `?:` or `!(… && var.x == null)`) |
+| `ConditionalConstraint` | `var.sla != "gold" \|\| var.replicas >= 3` — the inner constraint only applies when the predicate is true |
+| `OpaqueConstraint` | Everything else. Never guessed, never dropped. |
+
+Constraints on **list and set variables** use `Target = ConstraintTarget.Elements` and apply to each element, for example
+`alltrue([for v in var.x : contains(["a", "b"], v)])` or `length(setsubtract(var.x, ["a", "b"])) == 0`.
+
+A leading `var.x == null ||` guard is removed: constraints describe the rules for a value that has been provided.
+
+#### Required and optional based on other variables
+
+Terraform 1.9 allows a validation to reference other variables. The typical pattern is:
+
+```hcl
+variable "backup_vault_id" {
+  type    = string
+  default = null
+
+  validation {
+    condition     = var.sla != "gold" || var.backup_vault_id != null
+    error_message = "backup_vault_id is required for the gold SLA."
+  }
+}
+```
+
+This becomes a `RequiredWhenConstraint` whose `Predicate` is `sla == "gold"`. Evaluate it with
+`VariablePredicateEvaluator` against the values the user has entered so far:
+
+```csharp
+var vault = module.Variables.Single(v => v.Name == "backup_vault_id");
+var required = ConstraintExtractor.Extract(vault, module).OfType<RequiredWhenConstraint>().Single();
+
+var values = new Dictionary<string, TerraformLiteral>
+{
+    ["sla"] = TerraformLiteral.FromString("gold"),
+};
+
+bool? isRequired = VariablePredicateEvaluator.Evaluate(required.Predicate, values);
+// true  → show as required
+// false → show as optional
+// null  → cannot be decided yet (for example "sla" has not been chosen)
+```
+
+The evaluator uses Terraform's three-valued logic: a variable missing from the dictionary is unknown,
+`false && unknown` is `false` and `true || unknown` is `true`. Use `TerraformLiteral.Null` for a variable that is
+known to be `null`. Equality between values of different types is `false`, ordering comparisons only work on numbers.
+
+`ConstraintExtractor.GetReferencedVariables(variable)` lists the other variables a variable's validations depend on,
+which tells a UI which fields to re-evaluate when a value changes.
+
+A rule is attached to the variable whose `validation` block contains it. A rule written on the *driving* variable
+(`var.sla != "gold" || var.backup_vault_id != null` inside `sla`) is therefore a `ConditionalConstraint` on `sla`;
+it is not inverted onto `backup_vault_id`.
+
+#### Limits
+
+- Only top-level variables are modelled. Rules on attributes of object variables (`var.lock.kind`) are `OpaqueConstraint`.
+- Predicates support comparisons with literals, `contains` over literal lists, `null` checks, boolean variables and
+  `&&`/`||`/`!`. Comparing two variables, function calls on the left side (`lower(var.x) == "a"`) and other
+  expressions produce an `OpaqueConstraint`.
+- Nothing here replaces Terraform: the constraints drive the UI, `terraform plan` remains the source of truth.
+  Use [`ModuleValidator`](#evaluating-validations) when you need every validation evaluated, not only the common idioms.
+
+`error_message` may be a plain string, a heredoc, an interpolated string or any other expression such as
+`format(...)`. `TerraformValidation.ErrorMessage` holds its HCL text, `ErrorMessageExpression` the parsed expression.
+
+### Evaluating validations
+
+`ConstraintExtractor` recognises idioms. `ModuleValidator` goes further: it **evaluates** every `validation` block against
+the values entered so far, offline, with a restricted and side-effect free evaluator. Each validation ends up as one of
+
+| Outcome | Meaning |
+|---------|---------|
+| `Passed` | The condition is `true`. |
+| `Failed` | The condition is definitely `false`; `ErrorMessage` holds the rendered `error_message`. |
+| `Indeterminate` | The condition cannot be decided offline; `Reason` says why. It is **never** reported as `Failed`. |
+
+```csharp
+var module = TerraformModule.LoadFromDirectory("./my-module");
+var validator = new ModuleValidator(module);   // reusable and thread-safe; create it once per module
+
+var report = validator.Validate(new Dictionary<string, HclValue>
+{
+    ["sla"] = HclValue.FromString("gold"),
+    ["replicas"] = HclValue.FromNumber(2),
+});
+
+foreach (var failure in report.Failures)
+{
+    Console.WriteLine($"{failure.VariableName}: {failure.ErrorMessage}");
+}
+
+foreach (var open in report.Indeterminate)
+{
+    Console.WriteLine($"{open.VariableName}: not checked ({open.Reason})");
+}
+
+// Variables that have to be filled in right now, for example because "sla" is "gold".
+foreach (var name in report.RequiredNow)
+{
+    Console.WriteLine($"{name} is required");
+}
+```
+
+Values can also be given as HCL expressions (`Validate(IReadOnlyDictionary<string, HclExpression>)`, values that refer to
+things outside the module are unknown) or as the arguments of a `TerraformModuleCall`.
+
+How values are resolved, per variable:
+
+1. A supplied value is used; a missing one falls back to the default (which is evaluated as well).
+2. A required variable without a value has no value *yet*: validations that depend on it are `Indeterminate`,
+   they do not fail.
+3. The value is converted to the declared type with Terraform's rules (`"5"` → `5`, `1` → `"1"`, sets are sorted and
+   de-duplicated, `optional(T, default)` attributes are filled in, undeclared object attributes are dropped). A value
+   that cannot be converted ends up in `report.TypeErrors`, and the validations of that variable are `Indeterminate`.
+4. An explicit `HclValue.Null` stays `null` for nullable variables and is replaced by the default when
+   `nullable = false`.
+
+`ValidationReport` members:
+
+| Member | Description |
+|--------|-------------|
+| `Results`, `For(name)` | Every validation with its `VariableName`, `Index`, `Outcome`, `ErrorMessage`, `Reason` and `ReferencedVariables` |
+| `Failures`, `Indeterminate`, `HasFailures`, `HasIndeterminate` | Filtered views |
+| `Values` | The effective (defaulted and converted) value of every variable |
+| `TypeErrors` | Variables whose supplied value does not match their type |
+| `RequiredNow`, `IsRequiredNow(name)` | Variables without a default, plus variables with `default = null` that fail a validation when left `null` given the current values |
+
+#### What is evaluated
+
+The evaluator supports the Terraform expression language (operators, conditionals, `for` expressions, splat, index and
+attribute access, string interpolation) with `var.*` and `local.*` references. Locals are resolved lazily and only when a
+condition refers to them; cycles are `Indeterminate`.
+
+Functions are limited to a deterministic whitelist (`TerraformFunctions.SupportedFunctions`). It is checked against
+`terraform console` by a golden test suite; only `cidrcontains`, which newer Terraform versions add, is covered by unit
+tests alone:
+
+- Collections: `alltrue anytrue chunklist coalesce coalescelist compact concat contains distinct element flatten index keys
+  length lookup matchkeys merge one range reverse setintersection setproduct setsubtract setunion slice sort sum
+  transpose values zipmap`
+- Strings: `chomp endswith format formatlist indent join lower regex regexall replace split startswith strcontains strrev
+  substr title trim trimprefix trimspace trimsuffix upper`
+- Numbers: `abs ceil floor log max min parseint pow signum`
+- Conversion and encoding: `base64decode base64encode jsondecode jsonencode nonsensitive sensitive tobool tolist tomap
+  tonumber toset tostring urlencode`
+- Networking: `cidrcontains cidrhost cidrnetmask cidrsubnet cidrsubnets`
+- `can` and `try` are part of the evaluator.
+
+Anything else is **not** evaluated and makes the validation `Indeterminate`: functions with side effects or environment
+access (`file`, `templatefile`, `timestamp`, `uuid`, `sha*`, …), `provider::…` functions, data sources, resources,
+`path.*`, `terraform.*`, `each.*`, and template directives (`%{ if }`). Plug in your own functions with
+`ModuleValidatorOptions.FunctionResolver` (an `IHclFunctionResolver`, for example one that delegates to
+`TerraformFunctions.Default` first).
+
+Limits protect the host from expensive conditions: `MaxDepth`, `MaxIterations` (all `for` loops together) and a 250 ms
+timeout per regular expression. Exceeding one gives `Indeterminate`.
+
+#### Known differences from Terraform
+
+The result is only `Failed` when Terraform would definitely fail as well; when in doubt it is `Indeterminate`.
+
+- `&&`, `||` and `?:` short-circuit. Terraform evaluates both operands, so a condition that errors in an operand Terraform
+  would evaluate can be `Passed` here.
+- Numbers are IEEE doubles; Terraform uses arbitrary precision. Values that cannot be reproduced exactly
+  (for example `parseint` of huge numbers) are unknown, and `-0` is written as `0`.
+- Regular expressions are translated from RE2 to .NET; unsupported syntax (`(?m)`, `(?U)`, look-around, back-references,
+  Unicode script classes) and `format` verbs that are not implemented (`%e %g %c %U`) make the call unknown.
+- `cidr*` functions reject leading zeros, IPv4-mapped and zoned addresses (unknown), and negative `cidrsubnet` arguments.
+- A rendered `error_message` has its surrounding whitespace trimmed (the trailing newline of a heredoc), and `<<-` heredoc
+  indentation is not removed.
 
 ### Type system
 

@@ -462,6 +462,29 @@ if (result.Type == HclValueType.Unknown)
 }
 ```
 
+### Functions and options
+
+By default the evaluator does not call functions. Pass an `IHclFunctionResolver` through `HclEvaluatorOptions` to evaluate
+them; the resolver returns `null` for a function it does not know, which keeps the call unknown:
+
+```csharp
+var evaluator = new HclEvaluator(new HclEvaluatorOptions
+{
+    FunctionResolver = myResolver,             // IHclFunctionResolver
+    TreatUndefinedVariablesAsUnknown = true,   // unresolved references become Unknown instead of throwing
+    MaxDepth = 128,                            // expression nesting limit
+    MaxIterations = 100_000,                   // total for-expression iterations
+});
+```
+
+- A call with an unknown argument is unknown and never reaches the resolver.
+- `can(expr)` and `try(expr, fallback)` are built in; they recover from evaluation errors and `HclFunctionException`,
+  but not from `HclEvaluationLimitException`.
+- `&&`, `||` and `?:` short-circuit, `"${x}"` templates inside quoted strings are evaluated, and `for` expressions over
+  objects visit keys in sorted order, like Terraform.
+- The `TerraformDotnet` package ships a resolver with Terraform's deterministic functions
+  (`TerraformFunctions.Default`), see [Evaluating validations](terraformdotnet.md#evaluating-validations).
+
 ---
 
 ## Error Handling
@@ -488,4 +511,5 @@ catch (HclSyntaxException ex)
 | `MaxRecursionDepthExceededException` | Block nesting exceeds `MaxDepth` |
 | `HclUnresolvableException` | Variable not found during evaluation |
 
-All inherit from `HclException` → `Exception`.
+All inherit from `HclException` → `Exception`. Evaluation also throws `HclFunctionException` (invalid function
+arguments) and `HclEvaluationLimitException` (`MaxDepth` or `MaxIterations` exceeded), both `InvalidOperationException`s.
