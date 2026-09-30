@@ -20,6 +20,10 @@ override TerraformDotnet.Types.TerraformTupleType.ToHcl() -> string!
 override TerraformDotnet.Types.TerraformType.Equals(object? obj) -> bool
 override TerraformDotnet.Types.TerraformType.ToString() -> string!
 static TerraformDotnet.Emit.InputValue.implicit operator TerraformDotnet.Emit.InputValue!(string! expression) -> TerraformDotnet.Emit.InputValue!
+static TerraformDotnet.Evaluation.TerraformFunctions.Default.get -> TerraformDotnet.Evaluation.TerraformFunctions!
+static TerraformDotnet.Evaluation.TerraformFunctions.IsSupported(string! name) -> bool
+static TerraformDotnet.Evaluation.TerraformFunctions.SupportedFunctions.get -> System.Collections.Generic.IReadOnlyCollection<string!>!
+static TerraformDotnet.Evaluation.TerraformTypeConverter.TryConvert(TerraformDotnet.Hcl.Evaluation.HclValue! value, TerraformDotnet.Types.TerraformType? type, out TerraformDotnet.Hcl.Evaluation.HclValue! result, out string? error) -> bool
 static TerraformDotnet.Module.TerraformModule.LoadFromContent(System.ReadOnlySpan<byte> hclContent) -> TerraformDotnet.Module.TerraformModule!
 static TerraformDotnet.Module.TerraformModule.LoadFromContents(System.Collections.Generic.IEnumerable<byte[]!>! fileContents) -> TerraformDotnet.Module.TerraformModule!
 static TerraformDotnet.Module.TerraformModule.LoadFromDirectory(string! directoryPath) -> TerraformDotnet.Module.TerraformModule!
@@ -34,6 +38,14 @@ static TerraformDotnet.Types.TerraformType.Parse(TerraformDotnet.Hcl.Nodes.HclEx
 static TerraformDotnet.Types.TerraformType.Set(TerraformDotnet.Types.TerraformType! element) -> TerraformDotnet.Types.TerraformCollectionType!
 static TerraformDotnet.Types.TerraformType.String.get -> TerraformDotnet.Types.TerraformType!
 static TerraformDotnet.Types.TerraformType.Tuple(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Types.TerraformType!>! elements) -> TerraformDotnet.Types.TerraformTupleType!
+static TerraformDotnet.Validation.ConstraintExtractor.Extract(TerraformDotnet.Module.TerraformVariable! variable, TerraformDotnet.Module.TerraformModule? module = null) -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariableConstraint!>!
+static TerraformDotnet.Validation.ConstraintExtractor.ExtractAll(TerraformDotnet.Module.TerraformModule! module) -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariableConstraint!>!>!
+static TerraformDotnet.Validation.ConstraintExtractor.GetReferencedVariables(TerraformDotnet.Module.TerraformVariable! variable) -> System.Collections.Generic.IReadOnlyList<string!>!
+static TerraformDotnet.Validation.TerraformLiteral.FromBool(bool value) -> TerraformDotnet.Validation.TerraformLiteral!
+static TerraformDotnet.Validation.TerraformLiteral.FromNumber(decimal value) -> TerraformDotnet.Validation.TerraformLiteral!
+static TerraformDotnet.Validation.TerraformLiteral.FromString(string! value) -> TerraformDotnet.Validation.TerraformLiteral!
+static TerraformDotnet.Validation.TerraformLiteral.Null.get -> TerraformDotnet.Validation.TerraformLiteral!
+static TerraformDotnet.Validation.VariablePredicateEvaluator.Evaluate(TerraformDotnet.Validation.VariablePredicate! predicate, System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Validation.TerraformLiteral!>! values) -> bool?
 TerraformDotnet.Emit.FileEmitterOptions
 TerraformDotnet.Emit.FileEmitterOptions.FileEmitterOptions() -> void
 TerraformDotnet.Emit.FileEmitterOptions.InputFiles.get -> System.Collections.Generic.IDictionary<string!, System.Collections.Generic.IDictionary<string!, TerraformDotnet.Emit.InputValue!>!>?
@@ -93,6 +105,10 @@ TerraformDotnet.Emit.VariableDeclarationOptions.IncludeDescription.init -> void
 TerraformDotnet.Emit.VariableDeclarationOptions.IncludeType.get -> bool
 TerraformDotnet.Emit.VariableDeclarationOptions.IncludeType.init -> void
 TerraformDotnet.Emit.VariableDeclarationOptions.VariableDeclarationOptions() -> void
+TerraformDotnet.Evaluation.TerraformFunctions
+TerraformDotnet.Evaluation.TerraformFunctions.Invoke(string! name, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Hcl.Evaluation.HclValue!>! arguments) -> TerraformDotnet.Hcl.Evaluation.HclValue?
+TerraformDotnet.Evaluation.TerraformFunctions.TerraformFunctions() -> void
+TerraformDotnet.Evaluation.TerraformTypeConverter
 TerraformDotnet.Module.TerraformDataSource
 TerraformDotnet.Module.TerraformDataSource.Body.get -> TerraformDotnet.Hcl.Nodes.HclBody!
 TerraformDotnet.Module.TerraformDataSource.Count.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
@@ -105,6 +121,7 @@ TerraformDotnet.Module.TerraformLocal.Value.get -> TerraformDotnet.Hcl.Nodes.Hcl
 TerraformDotnet.Module.TerraformModule
 TerraformDotnet.Module.TerraformModule.DataSources.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformDataSource!>!
 TerraformDotnet.Module.TerraformModule.Locals.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformLocal!>!
+TerraformDotnet.Module.TerraformModule.ModuleCalls.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformModuleCall!>!
 TerraformDotnet.Module.TerraformModule.OptionalVariables.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
 TerraformDotnet.Module.TerraformModule.Outputs.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformOutput!>!
 TerraformDotnet.Module.TerraformModule.ProviderRequirements.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformProviderRequirement!>!
@@ -113,6 +130,17 @@ TerraformDotnet.Module.TerraformModule.RequiredVariables.get -> System.Collectio
 TerraformDotnet.Module.TerraformModule.GetSentinelVariables(string! sentinel) -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
 TerraformDotnet.Module.TerraformModule.Resources.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformResource!>!
 TerraformDotnet.Module.TerraformModule.Variables.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformVariable!>!
+TerraformDotnet.Module.TerraformModuleCall
+TerraformDotnet.Module.TerraformModuleCall.Arguments.get -> System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Hcl.Nodes.HclExpression!>!
+TerraformDotnet.Module.TerraformModuleCall.Body.get -> TerraformDotnet.Hcl.Nodes.HclBody!
+TerraformDotnet.Module.TerraformModuleCall.Count.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.DependsOn.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.ForEach.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.IgnoreNestedDeprecations.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.Name.get -> string!
+TerraformDotnet.Module.TerraformModuleCall.Providers.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
+TerraformDotnet.Module.TerraformModuleCall.Source.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
+TerraformDotnet.Module.TerraformModuleCall.Version.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
 TerraformDotnet.Module.TerraformOutput
 TerraformDotnet.Module.TerraformOutput.DependsOn.get -> System.Collections.Generic.IReadOnlyList<string!>?
 TerraformDotnet.Module.TerraformOutput.Description.get -> string?
@@ -134,6 +162,7 @@ TerraformDotnet.Module.TerraformResource.Type.get -> string!
 TerraformDotnet.Module.TerraformValidation
 TerraformDotnet.Module.TerraformValidation.Condition.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
 TerraformDotnet.Module.TerraformValidation.ErrorMessage.get -> string!
+TerraformDotnet.Module.TerraformValidation.ErrorMessageExpression.get -> TerraformDotnet.Hcl.Nodes.HclExpression!
 TerraformDotnet.Module.TerraformVariable
 TerraformDotnet.Module.TerraformVariable.Default.get -> TerraformDotnet.Hcl.Nodes.HclExpression?
 TerraformDotnet.Module.TerraformVariable.Description.get -> string?
@@ -145,6 +174,7 @@ TerraformDotnet.Module.TerraformVariable.IsSensitive.get -> bool
 TerraformDotnet.Module.TerraformVariable.Name.get -> string!
 TerraformDotnet.Module.TerraformVariable.Type.get -> TerraformDotnet.Types.TerraformType?
 TerraformDotnet.Module.TerraformVariable.Validation.get -> TerraformDotnet.Module.TerraformValidation?
+TerraformDotnet.Module.TerraformVariable.Validations.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Module.TerraformValidation!>!
 TerraformDotnet.Types.TerraformCollectionType
 TerraformDotnet.Types.TerraformCollectionType.Element.get -> TerraformDotnet.Types.TerraformType!
 TerraformDotnet.Types.TerraformObjectField
@@ -170,3 +200,168 @@ TerraformDotnet.Types.TerraformTypeKind.Object = 7 -> TerraformDotnet.Types.Terr
 TerraformDotnet.Types.TerraformTypeKind.Set = 5 -> TerraformDotnet.Types.TerraformTypeKind
 TerraformDotnet.Types.TerraformTypeKind.String = 0 -> TerraformDotnet.Types.TerraformTypeKind
 TerraformDotnet.Types.TerraformTypeKind.Tuple = 8 -> TerraformDotnet.Types.TerraformTypeKind
+TerraformDotnet.Validation.AllowedValuesConstraint
+TerraformDotnet.Validation.AllowedValuesConstraint.AllowedValuesConstraint(string! ErrorMessage, string! Source, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.AllowedValuesConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.AllowedValuesConstraint.Target.init -> void
+TerraformDotnet.Validation.AllowedValuesConstraint.Values.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>!
+TerraformDotnet.Validation.AllowedValuesConstraint.Values.init -> void
+TerraformDotnet.Validation.AndPredicate
+TerraformDotnet.Validation.AndPredicate.AndPredicate(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>! Operands) -> void
+TerraformDotnet.Validation.AndPredicate.Operands.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>!
+TerraformDotnet.Validation.AndPredicate.Operands.init -> void
+TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.CompareOperator.Equal = 0 -> TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.CompareOperator.GreaterThan = 4 -> TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.CompareOperator.GreaterThanOrEqual = 5 -> TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.CompareOperator.LessThan = 2 -> TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.CompareOperator.LessThanOrEqual = 3 -> TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.CompareOperator.NotEqual = 1 -> TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.ComparePredicate
+TerraformDotnet.Validation.ComparePredicate.ComparePredicate(string! Variable, TerraformDotnet.Validation.CompareOperator Operator, TerraformDotnet.Validation.TerraformLiteral! Value) -> void
+TerraformDotnet.Validation.ComparePredicate.Operator.get -> TerraformDotnet.Validation.CompareOperator
+TerraformDotnet.Validation.ComparePredicate.Operator.init -> void
+TerraformDotnet.Validation.ComparePredicate.Value.get -> TerraformDotnet.Validation.TerraformLiteral!
+TerraformDotnet.Validation.ComparePredicate.Value.init -> void
+TerraformDotnet.Validation.ComparePredicate.Variable.get -> string!
+TerraformDotnet.Validation.ComparePredicate.Variable.init -> void
+TerraformDotnet.Validation.ConditionalConstraint
+TerraformDotnet.Validation.ConditionalConstraint.ConditionalConstraint(string! ErrorMessage, string! Source, TerraformDotnet.Validation.VariablePredicate! Predicate, TerraformDotnet.Validation.VariableConstraint! Inner) -> void
+TerraformDotnet.Validation.ConditionalConstraint.Inner.get -> TerraformDotnet.Validation.VariableConstraint!
+TerraformDotnet.Validation.ConditionalConstraint.Inner.init -> void
+TerraformDotnet.Validation.ConditionalConstraint.Predicate.get -> TerraformDotnet.Validation.VariablePredicate!
+TerraformDotnet.Validation.ConditionalConstraint.Predicate.init -> void
+TerraformDotnet.Validation.ConstraintExtractor
+TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.ConstraintTarget.Elements = 1 -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.ConstraintTarget.Value = 0 -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.DisallowedValuesConstraint
+TerraformDotnet.Validation.DisallowedValuesConstraint.DisallowedValuesConstraint(string! ErrorMessage, string! Source, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.DisallowedValuesConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.DisallowedValuesConstraint.Target.init -> void
+TerraformDotnet.Validation.DisallowedValuesConstraint.Values.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>!
+TerraformDotnet.Validation.DisallowedValuesConstraint.Values.init -> void
+TerraformDotnet.Validation.InPredicate
+TerraformDotnet.Validation.InPredicate.InPredicate(string! Variable, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, bool Negated = false) -> void
+TerraformDotnet.Validation.InPredicate.Negated.get -> bool
+TerraformDotnet.Validation.InPredicate.Negated.init -> void
+TerraformDotnet.Validation.InPredicate.Values.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>!
+TerraformDotnet.Validation.InPredicate.Values.init -> void
+TerraformDotnet.Validation.InPredicate.Variable.get -> string!
+TerraformDotnet.Validation.InPredicate.Variable.init -> void
+TerraformDotnet.Validation.IsNullPredicate
+TerraformDotnet.Validation.IsNullPredicate.IsNullPredicate(string! Variable, bool Negated = false) -> void
+TerraformDotnet.Validation.IsNullPredicate.Negated.get -> bool
+TerraformDotnet.Validation.IsNullPredicate.Negated.init -> void
+TerraformDotnet.Validation.IsNullPredicate.Variable.get -> string!
+TerraformDotnet.Validation.IsNullPredicate.Variable.init -> void
+TerraformDotnet.Validation.LengthConstraint
+TerraformDotnet.Validation.LengthConstraint.LengthConstraint(string! ErrorMessage, string! Source, int? Min, int? Max, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.LengthConstraint.Max.get -> int?
+TerraformDotnet.Validation.LengthConstraint.Max.init -> void
+TerraformDotnet.Validation.LengthConstraint.Min.get -> int?
+TerraformDotnet.Validation.LengthConstraint.Min.init -> void
+TerraformDotnet.Validation.LengthConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.LengthConstraint.Target.init -> void
+TerraformDotnet.Validation.ModuleValidator
+TerraformDotnet.Validation.ModuleValidator.ModuleValidator(TerraformDotnet.Module.TerraformModule! module, TerraformDotnet.Validation.ModuleValidatorOptions? options = null) -> void
+TerraformDotnet.Validation.ModuleValidator.Validate(System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Hcl.Evaluation.HclValue!>! values) -> TerraformDotnet.Validation.ValidationReport!
+TerraformDotnet.Validation.ModuleValidator.Validate(System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Hcl.Nodes.HclExpression!>! values) -> TerraformDotnet.Validation.ValidationReport!
+TerraformDotnet.Validation.ModuleValidator.Validate(TerraformDotnet.Module.TerraformModuleCall! call) -> TerraformDotnet.Validation.ValidationReport!
+TerraformDotnet.Validation.ModuleValidatorOptions
+TerraformDotnet.Validation.ModuleValidatorOptions.FunctionResolver.get -> TerraformDotnet.Hcl.Evaluation.IHclFunctionResolver?
+TerraformDotnet.Validation.ModuleValidatorOptions.FunctionResolver.init -> void
+TerraformDotnet.Validation.ModuleValidatorOptions.MaxDepth.get -> int
+TerraformDotnet.Validation.ModuleValidatorOptions.MaxDepth.init -> void
+TerraformDotnet.Validation.ModuleValidatorOptions.MaxIterations.get -> int
+TerraformDotnet.Validation.ModuleValidatorOptions.MaxIterations.init -> void
+TerraformDotnet.Validation.ModuleValidatorOptions.ModuleValidatorOptions() -> void
+TerraformDotnet.Validation.NotNullConstraint
+TerraformDotnet.Validation.NotNullConstraint.NotNullConstraint(string! ErrorMessage, string! Source) -> void
+TerraformDotnet.Validation.NumericRangeConstraint
+TerraformDotnet.Validation.NumericRangeConstraint.Max.get -> decimal?
+TerraformDotnet.Validation.NumericRangeConstraint.Max.init -> void
+TerraformDotnet.Validation.NumericRangeConstraint.MaxInclusive.get -> bool
+TerraformDotnet.Validation.NumericRangeConstraint.MaxInclusive.init -> void
+TerraformDotnet.Validation.NumericRangeConstraint.Min.get -> decimal?
+TerraformDotnet.Validation.NumericRangeConstraint.Min.init -> void
+TerraformDotnet.Validation.NumericRangeConstraint.MinInclusive.get -> bool
+TerraformDotnet.Validation.NumericRangeConstraint.MinInclusive.init -> void
+TerraformDotnet.Validation.NumericRangeConstraint.NumericRangeConstraint(string! ErrorMessage, string! Source, decimal? Min, bool MinInclusive, decimal? Max, bool MaxInclusive, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.NumericRangeConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.NumericRangeConstraint.Target.init -> void
+TerraformDotnet.Validation.OpaqueConstraint
+TerraformDotnet.Validation.OpaqueConstraint.OpaqueConstraint(string! ErrorMessage, string! Source) -> void
+TerraformDotnet.Validation.OrPredicate
+TerraformDotnet.Validation.OrPredicate.Operands.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>!
+TerraformDotnet.Validation.OrPredicate.Operands.init -> void
+TerraformDotnet.Validation.OrPredicate.OrPredicate(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>! Operands) -> void
+TerraformDotnet.Validation.PatternConstraint
+TerraformDotnet.Validation.PatternConstraint.PatternConstraint(string! ErrorMessage, string! Source, string! Regex, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.PatternConstraint.Regex.get -> string!
+TerraformDotnet.Validation.PatternConstraint.Regex.init -> void
+TerraformDotnet.Validation.PatternConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.PatternConstraint.Target.init -> void
+TerraformDotnet.Validation.PrefixConstraint
+TerraformDotnet.Validation.PrefixConstraint.PrefixConstraint(string! ErrorMessage, string! Source, string! Text, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.PrefixConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.PrefixConstraint.Target.init -> void
+TerraformDotnet.Validation.PrefixConstraint.Text.get -> string!
+TerraformDotnet.Validation.PrefixConstraint.Text.init -> void
+TerraformDotnet.Validation.RequiredWhenConstraint
+TerraformDotnet.Validation.RequiredWhenConstraint.Predicate.get -> TerraformDotnet.Validation.VariablePredicate!
+TerraformDotnet.Validation.RequiredWhenConstraint.Predicate.init -> void
+TerraformDotnet.Validation.RequiredWhenConstraint.RequiredWhenConstraint(string! ErrorMessage, string! Source, TerraformDotnet.Validation.VariablePredicate! Predicate) -> void
+TerraformDotnet.Validation.SuffixConstraint
+TerraformDotnet.Validation.SuffixConstraint.SuffixConstraint(string! ErrorMessage, string! Source, string! Text, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.SuffixConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
+TerraformDotnet.Validation.SuffixConstraint.Target.init -> void
+TerraformDotnet.Validation.SuffixConstraint.Text.get -> string!
+TerraformDotnet.Validation.SuffixConstraint.Text.init -> void
+TerraformDotnet.Validation.TerraformLiteral
+TerraformDotnet.Validation.TerraformLiteral.IsNull.get -> bool
+TerraformDotnet.Validation.TerraformLiteral.Kind.get -> TerraformDotnet.Hcl.Nodes.HclLiteralKind
+TerraformDotnet.Validation.TerraformLiteral.Kind.init -> void
+TerraformDotnet.Validation.TerraformLiteral.TerraformEquals(TerraformDotnet.Validation.TerraformLiteral! other) -> bool
+TerraformDotnet.Validation.TerraformLiteral.TerraformLiteral(TerraformDotnet.Hcl.Nodes.HclLiteralKind Kind, string? Value) -> void
+TerraformDotnet.Validation.TerraformLiteral.TryGetNumber(out decimal number) -> bool
+TerraformDotnet.Validation.TerraformLiteral.Value.get -> string?
+TerraformDotnet.Validation.TerraformLiteral.Value.init -> void
+TerraformDotnet.Validation.ValidationOutcome
+TerraformDotnet.Validation.ValidationOutcome.Failed = 1 -> TerraformDotnet.Validation.ValidationOutcome
+TerraformDotnet.Validation.ValidationOutcome.Indeterminate = 2 -> TerraformDotnet.Validation.ValidationOutcome
+TerraformDotnet.Validation.ValidationOutcome.Passed = 0 -> TerraformDotnet.Validation.ValidationOutcome
+TerraformDotnet.Validation.ValidationReport
+TerraformDotnet.Validation.ValidationReport.Failures.get -> System.Collections.Generic.IEnumerable<TerraformDotnet.Validation.ValidationResult!>!
+TerraformDotnet.Validation.ValidationReport.For(string! variableName) -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.ValidationResult!>!
+TerraformDotnet.Validation.ValidationReport.HasFailures.get -> bool
+TerraformDotnet.Validation.ValidationReport.HasIndeterminate.get -> bool
+TerraformDotnet.Validation.ValidationReport.Indeterminate.get -> System.Collections.Generic.IEnumerable<TerraformDotnet.Validation.ValidationResult!>!
+TerraformDotnet.Validation.ValidationReport.IsRequiredNow(string! variableName) -> bool
+TerraformDotnet.Validation.ValidationReport.RequiredNow.get -> System.Collections.Generic.IReadOnlyList<string!>!
+TerraformDotnet.Validation.ValidationReport.Results.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.ValidationResult!>!
+TerraformDotnet.Validation.ValidationReport.TypeErrors.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+TerraformDotnet.Validation.ValidationReport.Values.get -> System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Hcl.Evaluation.HclValue!>!
+TerraformDotnet.Validation.ValidationResult
+TerraformDotnet.Validation.ValidationResult.ErrorMessage.get -> string?
+TerraformDotnet.Validation.ValidationResult.ErrorMessage.init -> void
+TerraformDotnet.Validation.ValidationResult.Index.get -> int
+TerraformDotnet.Validation.ValidationResult.Index.init -> void
+TerraformDotnet.Validation.ValidationResult.Outcome.get -> TerraformDotnet.Validation.ValidationOutcome
+TerraformDotnet.Validation.ValidationResult.Outcome.init -> void
+TerraformDotnet.Validation.ValidationResult.Reason.get -> string?
+TerraformDotnet.Validation.ValidationResult.Reason.init -> void
+TerraformDotnet.Validation.ValidationResult.ReferencedVariables.get -> System.Collections.Generic.IReadOnlyList<string!>!
+TerraformDotnet.Validation.ValidationResult.ReferencedVariables.init -> void
+TerraformDotnet.Validation.ValidationResult.Validation.get -> TerraformDotnet.Module.TerraformValidation!
+TerraformDotnet.Validation.ValidationResult.Validation.init -> void
+TerraformDotnet.Validation.ValidationResult.ValidationResult(string! VariableName, int Index, TerraformDotnet.Module.TerraformValidation! Validation, TerraformDotnet.Validation.ValidationOutcome Outcome, string? ErrorMessage, string? Reason, System.Collections.Generic.IReadOnlyList<string!>! ReferencedVariables) -> void
+TerraformDotnet.Validation.ValidationResult.VariableName.get -> string!
+TerraformDotnet.Validation.ValidationResult.VariableName.init -> void
+TerraformDotnet.Validation.VariableConstraint
+TerraformDotnet.Validation.VariableConstraint.ErrorMessage.get -> string!
+TerraformDotnet.Validation.VariableConstraint.ErrorMessage.init -> void
+TerraformDotnet.Validation.VariableConstraint.Source.get -> string!
+TerraformDotnet.Validation.VariableConstraint.Source.init -> void
+TerraformDotnet.Validation.VariablePredicate
+TerraformDotnet.Validation.VariablePredicateEvaluator
