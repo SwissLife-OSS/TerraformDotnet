@@ -2,7 +2,25 @@
 abstract TerraformDotnet.Types.TerraformType.Equals(TerraformDotnet.Types.TerraformType? other) -> bool
 abstract TerraformDotnet.Types.TerraformType.Kind.get -> TerraformDotnet.Types.TerraformTypeKind
 abstract TerraformDotnet.Types.TerraformType.ToHcl() -> string!
+abstract TerraformDotnet.Validation.VariableConstraint.<Clone>$() -> TerraformDotnet.Validation.VariableConstraint!
+abstract TerraformDotnet.Validation.VariablePredicate.<Clone>$() -> TerraformDotnet.Validation.VariablePredicate!
 override abstract TerraformDotnet.Types.TerraformType.GetHashCode() -> int
+override sealed TerraformDotnet.Validation.AllowedValuesConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.AndPredicate.Equals(TerraformDotnet.Validation.VariablePredicate? other) -> bool
+override sealed TerraformDotnet.Validation.ComparePredicate.Equals(TerraformDotnet.Validation.VariablePredicate? other) -> bool
+override sealed TerraformDotnet.Validation.ConditionalConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.DisallowedValuesConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.InPredicate.Equals(TerraformDotnet.Validation.VariablePredicate? other) -> bool
+override sealed TerraformDotnet.Validation.IsNullPredicate.Equals(TerraformDotnet.Validation.VariablePredicate? other) -> bool
+override sealed TerraformDotnet.Validation.LengthConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.NotNullConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.NumericRangeConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.OpaqueConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.OrPredicate.Equals(TerraformDotnet.Validation.VariablePredicate? other) -> bool
+override sealed TerraformDotnet.Validation.PatternConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.PrefixConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.RequiredWhenConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+override sealed TerraformDotnet.Validation.SuffixConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
 override TerraformDotnet.Types.TerraformCollectionType.Equals(TerraformDotnet.Types.TerraformType? other) -> bool
 override TerraformDotnet.Types.TerraformCollectionType.GetHashCode() -> int
 override TerraformDotnet.Types.TerraformCollectionType.Kind.get -> TerraformDotnet.Types.TerraformTypeKind
@@ -19,6 +37,82 @@ override TerraformDotnet.Types.TerraformTupleType.Kind.get -> TerraformDotnet.Ty
 override TerraformDotnet.Types.TerraformTupleType.ToHcl() -> string!
 override TerraformDotnet.Types.TerraformType.Equals(object? obj) -> bool
 override TerraformDotnet.Types.TerraformType.ToString() -> string!
+override TerraformDotnet.Validation.AllowedValuesConstraint.<Clone>$() -> TerraformDotnet.Validation.AllowedValuesConstraint!
+override TerraformDotnet.Validation.AllowedValuesConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.AllowedValuesConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.AllowedValuesConstraint.ToString() -> string!
+override TerraformDotnet.Validation.AndPredicate.<Clone>$() -> TerraformDotnet.Validation.AndPredicate!
+override TerraformDotnet.Validation.AndPredicate.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.AndPredicate.GetHashCode() -> int
+override TerraformDotnet.Validation.AndPredicate.ToString() -> string!
+override TerraformDotnet.Validation.ComparePredicate.<Clone>$() -> TerraformDotnet.Validation.ComparePredicate!
+override TerraformDotnet.Validation.ComparePredicate.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.ComparePredicate.GetHashCode() -> int
+override TerraformDotnet.Validation.ComparePredicate.ToString() -> string!
+override TerraformDotnet.Validation.ConditionalConstraint.<Clone>$() -> TerraformDotnet.Validation.ConditionalConstraint!
+override TerraformDotnet.Validation.ConditionalConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.ConditionalConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.ConditionalConstraint.ToString() -> string!
+override TerraformDotnet.Validation.DisallowedValuesConstraint.<Clone>$() -> TerraformDotnet.Validation.DisallowedValuesConstraint!
+override TerraformDotnet.Validation.DisallowedValuesConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.DisallowedValuesConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.DisallowedValuesConstraint.ToString() -> string!
+override TerraformDotnet.Validation.InPredicate.<Clone>$() -> TerraformDotnet.Validation.InPredicate!
+override TerraformDotnet.Validation.InPredicate.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.InPredicate.GetHashCode() -> int
+override TerraformDotnet.Validation.InPredicate.ToString() -> string!
+override TerraformDotnet.Validation.IsNullPredicate.<Clone>$() -> TerraformDotnet.Validation.IsNullPredicate!
+override TerraformDotnet.Validation.IsNullPredicate.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.IsNullPredicate.GetHashCode() -> int
+override TerraformDotnet.Validation.IsNullPredicate.ToString() -> string!
+override TerraformDotnet.Validation.LengthConstraint.<Clone>$() -> TerraformDotnet.Validation.LengthConstraint!
+override TerraformDotnet.Validation.LengthConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.LengthConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.LengthConstraint.ToString() -> string!
+override TerraformDotnet.Validation.NotNullConstraint.<Clone>$() -> TerraformDotnet.Validation.NotNullConstraint!
+override TerraformDotnet.Validation.NotNullConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.NotNullConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.NotNullConstraint.ToString() -> string!
+override TerraformDotnet.Validation.NumericRangeConstraint.<Clone>$() -> TerraformDotnet.Validation.NumericRangeConstraint!
+override TerraformDotnet.Validation.NumericRangeConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.NumericRangeConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.NumericRangeConstraint.ToString() -> string!
+override TerraformDotnet.Validation.OpaqueConstraint.<Clone>$() -> TerraformDotnet.Validation.OpaqueConstraint!
+override TerraformDotnet.Validation.OpaqueConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.OpaqueConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.OpaqueConstraint.ToString() -> string!
+override TerraformDotnet.Validation.OrPredicate.<Clone>$() -> TerraformDotnet.Validation.OrPredicate!
+override TerraformDotnet.Validation.OrPredicate.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.OrPredicate.GetHashCode() -> int
+override TerraformDotnet.Validation.OrPredicate.ToString() -> string!
+override TerraformDotnet.Validation.PatternConstraint.<Clone>$() -> TerraformDotnet.Validation.PatternConstraint!
+override TerraformDotnet.Validation.PatternConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.PatternConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.PatternConstraint.ToString() -> string!
+override TerraformDotnet.Validation.PrefixConstraint.<Clone>$() -> TerraformDotnet.Validation.PrefixConstraint!
+override TerraformDotnet.Validation.PrefixConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.PrefixConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.PrefixConstraint.ToString() -> string!
+override TerraformDotnet.Validation.RequiredWhenConstraint.<Clone>$() -> TerraformDotnet.Validation.RequiredWhenConstraint!
+override TerraformDotnet.Validation.RequiredWhenConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.RequiredWhenConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.RequiredWhenConstraint.ToString() -> string!
+override TerraformDotnet.Validation.SuffixConstraint.<Clone>$() -> TerraformDotnet.Validation.SuffixConstraint!
+override TerraformDotnet.Validation.SuffixConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.SuffixConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.SuffixConstraint.ToString() -> string!
+override TerraformDotnet.Validation.TerraformLiteral.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.TerraformLiteral.GetHashCode() -> int
+override TerraformDotnet.Validation.TerraformLiteral.ToString() -> string!
+override TerraformDotnet.Validation.ValidationResult.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.ValidationResult.GetHashCode() -> int
+override TerraformDotnet.Validation.ValidationResult.ToString() -> string!
+override TerraformDotnet.Validation.VariableConstraint.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.VariableConstraint.GetHashCode() -> int
+override TerraformDotnet.Validation.VariableConstraint.ToString() -> string!
+override TerraformDotnet.Validation.VariablePredicate.Equals(object? obj) -> bool
+override TerraformDotnet.Validation.VariablePredicate.GetHashCode() -> int
+override TerraformDotnet.Validation.VariablePredicate.ToString() -> string!
 static TerraformDotnet.Emit.InputValue.implicit operator TerraformDotnet.Emit.InputValue!(string! expression) -> TerraformDotnet.Emit.InputValue!
 static TerraformDotnet.Evaluation.TerraformFunctions.Default.get -> TerraformDotnet.Evaluation.TerraformFunctions!
 static TerraformDotnet.Evaluation.TerraformFunctions.IsSupported(string! name) -> bool
@@ -38,13 +132,53 @@ static TerraformDotnet.Types.TerraformType.Parse(TerraformDotnet.Hcl.Nodes.HclEx
 static TerraformDotnet.Types.TerraformType.Set(TerraformDotnet.Types.TerraformType! element) -> TerraformDotnet.Types.TerraformCollectionType!
 static TerraformDotnet.Types.TerraformType.String.get -> TerraformDotnet.Types.TerraformType!
 static TerraformDotnet.Types.TerraformType.Tuple(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Types.TerraformType!>! elements) -> TerraformDotnet.Types.TerraformTupleType!
+static TerraformDotnet.Validation.AllowedValuesConstraint.operator !=(TerraformDotnet.Validation.AllowedValuesConstraint? left, TerraformDotnet.Validation.AllowedValuesConstraint? right) -> bool
+static TerraformDotnet.Validation.AllowedValuesConstraint.operator ==(TerraformDotnet.Validation.AllowedValuesConstraint? left, TerraformDotnet.Validation.AllowedValuesConstraint? right) -> bool
+static TerraformDotnet.Validation.AndPredicate.operator !=(TerraformDotnet.Validation.AndPredicate? left, TerraformDotnet.Validation.AndPredicate? right) -> bool
+static TerraformDotnet.Validation.AndPredicate.operator ==(TerraformDotnet.Validation.AndPredicate? left, TerraformDotnet.Validation.AndPredicate? right) -> bool
+static TerraformDotnet.Validation.ComparePredicate.operator !=(TerraformDotnet.Validation.ComparePredicate? left, TerraformDotnet.Validation.ComparePredicate? right) -> bool
+static TerraformDotnet.Validation.ComparePredicate.operator ==(TerraformDotnet.Validation.ComparePredicate? left, TerraformDotnet.Validation.ComparePredicate? right) -> bool
+static TerraformDotnet.Validation.ConditionalConstraint.operator !=(TerraformDotnet.Validation.ConditionalConstraint? left, TerraformDotnet.Validation.ConditionalConstraint? right) -> bool
+static TerraformDotnet.Validation.ConditionalConstraint.operator ==(TerraformDotnet.Validation.ConditionalConstraint? left, TerraformDotnet.Validation.ConditionalConstraint? right) -> bool
 static TerraformDotnet.Validation.ConstraintExtractor.Extract(TerraformDotnet.Module.TerraformVariable! variable, TerraformDotnet.Module.TerraformModule? module = null) -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariableConstraint!>!
 static TerraformDotnet.Validation.ConstraintExtractor.ExtractAll(TerraformDotnet.Module.TerraformModule! module) -> System.Collections.Generic.IReadOnlyDictionary<string!, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariableConstraint!>!>!
 static TerraformDotnet.Validation.ConstraintExtractor.GetReferencedVariables(TerraformDotnet.Module.TerraformVariable! variable) -> System.Collections.Generic.IReadOnlyList<string!>!
+static TerraformDotnet.Validation.DisallowedValuesConstraint.operator !=(TerraformDotnet.Validation.DisallowedValuesConstraint? left, TerraformDotnet.Validation.DisallowedValuesConstraint? right) -> bool
+static TerraformDotnet.Validation.DisallowedValuesConstraint.operator ==(TerraformDotnet.Validation.DisallowedValuesConstraint? left, TerraformDotnet.Validation.DisallowedValuesConstraint? right) -> bool
+static TerraformDotnet.Validation.InPredicate.operator !=(TerraformDotnet.Validation.InPredicate? left, TerraformDotnet.Validation.InPredicate? right) -> bool
+static TerraformDotnet.Validation.InPredicate.operator ==(TerraformDotnet.Validation.InPredicate? left, TerraformDotnet.Validation.InPredicate? right) -> bool
+static TerraformDotnet.Validation.IsNullPredicate.operator !=(TerraformDotnet.Validation.IsNullPredicate? left, TerraformDotnet.Validation.IsNullPredicate? right) -> bool
+static TerraformDotnet.Validation.IsNullPredicate.operator ==(TerraformDotnet.Validation.IsNullPredicate? left, TerraformDotnet.Validation.IsNullPredicate? right) -> bool
+static TerraformDotnet.Validation.LengthConstraint.operator !=(TerraformDotnet.Validation.LengthConstraint? left, TerraformDotnet.Validation.LengthConstraint? right) -> bool
+static TerraformDotnet.Validation.LengthConstraint.operator ==(TerraformDotnet.Validation.LengthConstraint? left, TerraformDotnet.Validation.LengthConstraint? right) -> bool
+static TerraformDotnet.Validation.NotNullConstraint.operator !=(TerraformDotnet.Validation.NotNullConstraint? left, TerraformDotnet.Validation.NotNullConstraint? right) -> bool
+static TerraformDotnet.Validation.NotNullConstraint.operator ==(TerraformDotnet.Validation.NotNullConstraint? left, TerraformDotnet.Validation.NotNullConstraint? right) -> bool
+static TerraformDotnet.Validation.NumericRangeConstraint.operator !=(TerraformDotnet.Validation.NumericRangeConstraint? left, TerraformDotnet.Validation.NumericRangeConstraint? right) -> bool
+static TerraformDotnet.Validation.NumericRangeConstraint.operator ==(TerraformDotnet.Validation.NumericRangeConstraint? left, TerraformDotnet.Validation.NumericRangeConstraint? right) -> bool
+static TerraformDotnet.Validation.OpaqueConstraint.operator !=(TerraformDotnet.Validation.OpaqueConstraint? left, TerraformDotnet.Validation.OpaqueConstraint? right) -> bool
+static TerraformDotnet.Validation.OpaqueConstraint.operator ==(TerraformDotnet.Validation.OpaqueConstraint? left, TerraformDotnet.Validation.OpaqueConstraint? right) -> bool
+static TerraformDotnet.Validation.OrPredicate.operator !=(TerraformDotnet.Validation.OrPredicate? left, TerraformDotnet.Validation.OrPredicate? right) -> bool
+static TerraformDotnet.Validation.OrPredicate.operator ==(TerraformDotnet.Validation.OrPredicate? left, TerraformDotnet.Validation.OrPredicate? right) -> bool
+static TerraformDotnet.Validation.PatternConstraint.operator !=(TerraformDotnet.Validation.PatternConstraint? left, TerraformDotnet.Validation.PatternConstraint? right) -> bool
+static TerraformDotnet.Validation.PatternConstraint.operator ==(TerraformDotnet.Validation.PatternConstraint? left, TerraformDotnet.Validation.PatternConstraint? right) -> bool
+static TerraformDotnet.Validation.PrefixConstraint.operator !=(TerraformDotnet.Validation.PrefixConstraint? left, TerraformDotnet.Validation.PrefixConstraint? right) -> bool
+static TerraformDotnet.Validation.PrefixConstraint.operator ==(TerraformDotnet.Validation.PrefixConstraint? left, TerraformDotnet.Validation.PrefixConstraint? right) -> bool
+static TerraformDotnet.Validation.RequiredWhenConstraint.operator !=(TerraformDotnet.Validation.RequiredWhenConstraint? left, TerraformDotnet.Validation.RequiredWhenConstraint? right) -> bool
+static TerraformDotnet.Validation.RequiredWhenConstraint.operator ==(TerraformDotnet.Validation.RequiredWhenConstraint? left, TerraformDotnet.Validation.RequiredWhenConstraint? right) -> bool
+static TerraformDotnet.Validation.SuffixConstraint.operator !=(TerraformDotnet.Validation.SuffixConstraint? left, TerraformDotnet.Validation.SuffixConstraint? right) -> bool
+static TerraformDotnet.Validation.SuffixConstraint.operator ==(TerraformDotnet.Validation.SuffixConstraint? left, TerraformDotnet.Validation.SuffixConstraint? right) -> bool
 static TerraformDotnet.Validation.TerraformLiteral.FromBool(bool value) -> TerraformDotnet.Validation.TerraformLiteral!
 static TerraformDotnet.Validation.TerraformLiteral.FromNumber(decimal value) -> TerraformDotnet.Validation.TerraformLiteral!
 static TerraformDotnet.Validation.TerraformLiteral.FromString(string! value) -> TerraformDotnet.Validation.TerraformLiteral!
 static TerraformDotnet.Validation.TerraformLiteral.Null.get -> TerraformDotnet.Validation.TerraformLiteral!
+static TerraformDotnet.Validation.TerraformLiteral.operator !=(TerraformDotnet.Validation.TerraformLiteral? left, TerraformDotnet.Validation.TerraformLiteral? right) -> bool
+static TerraformDotnet.Validation.TerraformLiteral.operator ==(TerraformDotnet.Validation.TerraformLiteral? left, TerraformDotnet.Validation.TerraformLiteral? right) -> bool
+static TerraformDotnet.Validation.ValidationResult.operator !=(TerraformDotnet.Validation.ValidationResult? left, TerraformDotnet.Validation.ValidationResult? right) -> bool
+static TerraformDotnet.Validation.ValidationResult.operator ==(TerraformDotnet.Validation.ValidationResult? left, TerraformDotnet.Validation.ValidationResult? right) -> bool
+static TerraformDotnet.Validation.VariableConstraint.operator !=(TerraformDotnet.Validation.VariableConstraint? left, TerraformDotnet.Validation.VariableConstraint? right) -> bool
+static TerraformDotnet.Validation.VariableConstraint.operator ==(TerraformDotnet.Validation.VariableConstraint? left, TerraformDotnet.Validation.VariableConstraint? right) -> bool
+static TerraformDotnet.Validation.VariablePredicate.operator !=(TerraformDotnet.Validation.VariablePredicate? left, TerraformDotnet.Validation.VariablePredicate? right) -> bool
+static TerraformDotnet.Validation.VariablePredicate.operator ==(TerraformDotnet.Validation.VariablePredicate? left, TerraformDotnet.Validation.VariablePredicate? right) -> bool
 static TerraformDotnet.Validation.VariablePredicateEvaluator.Evaluate(TerraformDotnet.Validation.VariablePredicate! predicate, System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Validation.TerraformLiteral!>! values) -> bool?
 TerraformDotnet.Emit.FileEmitterOptions
 TerraformDotnet.Emit.FileEmitterOptions.FileEmitterOptions() -> void
@@ -201,12 +335,16 @@ TerraformDotnet.Types.TerraformTypeKind.String = 0 -> TerraformDotnet.Types.Terr
 TerraformDotnet.Types.TerraformTypeKind.Tuple = 8 -> TerraformDotnet.Types.TerraformTypeKind
 TerraformDotnet.Validation.AllowedValuesConstraint
 TerraformDotnet.Validation.AllowedValuesConstraint.AllowedValuesConstraint(string! ErrorMessage, string! Source, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.AllowedValuesConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, out TerraformDotnet.Validation.ConstraintTarget Target) -> void
+TerraformDotnet.Validation.AllowedValuesConstraint.Equals(TerraformDotnet.Validation.AllowedValuesConstraint? other) -> bool
 TerraformDotnet.Validation.AllowedValuesConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.AllowedValuesConstraint.Target.init -> void
 TerraformDotnet.Validation.AllowedValuesConstraint.Values.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>!
 TerraformDotnet.Validation.AllowedValuesConstraint.Values.init -> void
 TerraformDotnet.Validation.AndPredicate
 TerraformDotnet.Validation.AndPredicate.AndPredicate(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>! Operands) -> void
+TerraformDotnet.Validation.AndPredicate.Deconstruct(out System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>! Operands) -> void
+TerraformDotnet.Validation.AndPredicate.Equals(TerraformDotnet.Validation.AndPredicate? other) -> bool
 TerraformDotnet.Validation.AndPredicate.Operands.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>!
 TerraformDotnet.Validation.AndPredicate.Operands.init -> void
 TerraformDotnet.Validation.CompareOperator
@@ -218,6 +356,8 @@ TerraformDotnet.Validation.CompareOperator.LessThanOrEqual = 3 -> TerraformDotne
 TerraformDotnet.Validation.CompareOperator.NotEqual = 1 -> TerraformDotnet.Validation.CompareOperator
 TerraformDotnet.Validation.ComparePredicate
 TerraformDotnet.Validation.ComparePredicate.ComparePredicate(string! Variable, TerraformDotnet.Validation.CompareOperator Operator, TerraformDotnet.Validation.TerraformLiteral! Value) -> void
+TerraformDotnet.Validation.ComparePredicate.Deconstruct(out string! Variable, out TerraformDotnet.Validation.CompareOperator Operator, out TerraformDotnet.Validation.TerraformLiteral! Value) -> void
+TerraformDotnet.Validation.ComparePredicate.Equals(TerraformDotnet.Validation.ComparePredicate? other) -> bool
 TerraformDotnet.Validation.ComparePredicate.Operator.get -> TerraformDotnet.Validation.CompareOperator
 TerraformDotnet.Validation.ComparePredicate.Operator.init -> void
 TerraformDotnet.Validation.ComparePredicate.Value.get -> TerraformDotnet.Validation.TerraformLiteral!
@@ -226,6 +366,8 @@ TerraformDotnet.Validation.ComparePredicate.Variable.get -> string!
 TerraformDotnet.Validation.ComparePredicate.Variable.init -> void
 TerraformDotnet.Validation.ConditionalConstraint
 TerraformDotnet.Validation.ConditionalConstraint.ConditionalConstraint(string! ErrorMessage, string! Source, TerraformDotnet.Validation.VariablePredicate! Predicate, TerraformDotnet.Validation.VariableConstraint! Inner) -> void
+TerraformDotnet.Validation.ConditionalConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out TerraformDotnet.Validation.VariablePredicate! Predicate, out TerraformDotnet.Validation.VariableConstraint! Inner) -> void
+TerraformDotnet.Validation.ConditionalConstraint.Equals(TerraformDotnet.Validation.ConditionalConstraint? other) -> bool
 TerraformDotnet.Validation.ConditionalConstraint.Inner.get -> TerraformDotnet.Validation.VariableConstraint!
 TerraformDotnet.Validation.ConditionalConstraint.Inner.init -> void
 TerraformDotnet.Validation.ConditionalConstraint.Predicate.get -> TerraformDotnet.Validation.VariablePredicate!
@@ -235,12 +377,16 @@ TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.ConstraintTarget.Elements = 1 -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.ConstraintTarget.Value = 0 -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.DisallowedValuesConstraint
+TerraformDotnet.Validation.DisallowedValuesConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, out TerraformDotnet.Validation.ConstraintTarget Target) -> void
 TerraformDotnet.Validation.DisallowedValuesConstraint.DisallowedValuesConstraint(string! ErrorMessage, string! Source, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
+TerraformDotnet.Validation.DisallowedValuesConstraint.Equals(TerraformDotnet.Validation.DisallowedValuesConstraint? other) -> bool
 TerraformDotnet.Validation.DisallowedValuesConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.DisallowedValuesConstraint.Target.init -> void
 TerraformDotnet.Validation.DisallowedValuesConstraint.Values.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>!
 TerraformDotnet.Validation.DisallowedValuesConstraint.Values.init -> void
 TerraformDotnet.Validation.InPredicate
+TerraformDotnet.Validation.InPredicate.Deconstruct(out string! Variable, out System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, out bool Negated) -> void
+TerraformDotnet.Validation.InPredicate.Equals(TerraformDotnet.Validation.InPredicate? other) -> bool
 TerraformDotnet.Validation.InPredicate.InPredicate(string! Variable, System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.TerraformLiteral!>! Values, bool Negated = false) -> void
 TerraformDotnet.Validation.InPredicate.Negated.get -> bool
 TerraformDotnet.Validation.InPredicate.Negated.init -> void
@@ -249,12 +395,16 @@ TerraformDotnet.Validation.InPredicate.Values.init -> void
 TerraformDotnet.Validation.InPredicate.Variable.get -> string!
 TerraformDotnet.Validation.InPredicate.Variable.init -> void
 TerraformDotnet.Validation.IsNullPredicate
+TerraformDotnet.Validation.IsNullPredicate.Deconstruct(out string! Variable, out bool Negated) -> void
+TerraformDotnet.Validation.IsNullPredicate.Equals(TerraformDotnet.Validation.IsNullPredicate? other) -> bool
 TerraformDotnet.Validation.IsNullPredicate.IsNullPredicate(string! Variable, bool Negated = false) -> void
 TerraformDotnet.Validation.IsNullPredicate.Negated.get -> bool
 TerraformDotnet.Validation.IsNullPredicate.Negated.init -> void
 TerraformDotnet.Validation.IsNullPredicate.Variable.get -> string!
 TerraformDotnet.Validation.IsNullPredicate.Variable.init -> void
 TerraformDotnet.Validation.LengthConstraint
+TerraformDotnet.Validation.LengthConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out int? Min, out int? Max, out TerraformDotnet.Validation.ConstraintTarget Target) -> void
+TerraformDotnet.Validation.LengthConstraint.Equals(TerraformDotnet.Validation.LengthConstraint? other) -> bool
 TerraformDotnet.Validation.LengthConstraint.LengthConstraint(string! ErrorMessage, string! Source, int? Min, int? Max, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
 TerraformDotnet.Validation.LengthConstraint.Max.get -> int?
 TerraformDotnet.Validation.LengthConstraint.Max.init -> void
@@ -276,8 +426,12 @@ TerraformDotnet.Validation.ModuleValidatorOptions.MaxIterations.get -> int
 TerraformDotnet.Validation.ModuleValidatorOptions.MaxIterations.init -> void
 TerraformDotnet.Validation.ModuleValidatorOptions.ModuleValidatorOptions() -> void
 TerraformDotnet.Validation.NotNullConstraint
+TerraformDotnet.Validation.NotNullConstraint.Deconstruct(out string! ErrorMessage, out string! Source) -> void
+TerraformDotnet.Validation.NotNullConstraint.Equals(TerraformDotnet.Validation.NotNullConstraint? other) -> bool
 TerraformDotnet.Validation.NotNullConstraint.NotNullConstraint(string! ErrorMessage, string! Source) -> void
 TerraformDotnet.Validation.NumericRangeConstraint
+TerraformDotnet.Validation.NumericRangeConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out decimal? Min, out bool MinInclusive, out decimal? Max, out bool MaxInclusive, out TerraformDotnet.Validation.ConstraintTarget Target) -> void
+TerraformDotnet.Validation.NumericRangeConstraint.Equals(TerraformDotnet.Validation.NumericRangeConstraint? other) -> bool
 TerraformDotnet.Validation.NumericRangeConstraint.Max.get -> decimal?
 TerraformDotnet.Validation.NumericRangeConstraint.Max.init -> void
 TerraformDotnet.Validation.NumericRangeConstraint.MaxInclusive.get -> bool
@@ -290,34 +444,49 @@ TerraformDotnet.Validation.NumericRangeConstraint.NumericRangeConstraint(string!
 TerraformDotnet.Validation.NumericRangeConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.NumericRangeConstraint.Target.init -> void
 TerraformDotnet.Validation.OpaqueConstraint
+TerraformDotnet.Validation.OpaqueConstraint.Deconstruct(out string! ErrorMessage, out string! Source) -> void
+TerraformDotnet.Validation.OpaqueConstraint.Equals(TerraformDotnet.Validation.OpaqueConstraint? other) -> bool
 TerraformDotnet.Validation.OpaqueConstraint.OpaqueConstraint(string! ErrorMessage, string! Source) -> void
 TerraformDotnet.Validation.OrPredicate
+TerraformDotnet.Validation.OrPredicate.Deconstruct(out System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>! Operands) -> void
+TerraformDotnet.Validation.OrPredicate.Equals(TerraformDotnet.Validation.OrPredicate? other) -> bool
 TerraformDotnet.Validation.OrPredicate.Operands.get -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>!
 TerraformDotnet.Validation.OrPredicate.Operands.init -> void
 TerraformDotnet.Validation.OrPredicate.OrPredicate(System.Collections.Generic.IReadOnlyList<TerraformDotnet.Validation.VariablePredicate!>! Operands) -> void
 TerraformDotnet.Validation.PatternConstraint
+TerraformDotnet.Validation.PatternConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out string! Regex, out TerraformDotnet.Validation.ConstraintTarget Target) -> void
+TerraformDotnet.Validation.PatternConstraint.Equals(TerraformDotnet.Validation.PatternConstraint? other) -> bool
 TerraformDotnet.Validation.PatternConstraint.PatternConstraint(string! ErrorMessage, string! Source, string! Regex, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
 TerraformDotnet.Validation.PatternConstraint.Regex.get -> string!
 TerraformDotnet.Validation.PatternConstraint.Regex.init -> void
 TerraformDotnet.Validation.PatternConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.PatternConstraint.Target.init -> void
 TerraformDotnet.Validation.PrefixConstraint
+TerraformDotnet.Validation.PrefixConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out string! Text, out TerraformDotnet.Validation.ConstraintTarget Target) -> void
+TerraformDotnet.Validation.PrefixConstraint.Equals(TerraformDotnet.Validation.PrefixConstraint? other) -> bool
 TerraformDotnet.Validation.PrefixConstraint.PrefixConstraint(string! ErrorMessage, string! Source, string! Text, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
 TerraformDotnet.Validation.PrefixConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.PrefixConstraint.Target.init -> void
 TerraformDotnet.Validation.PrefixConstraint.Text.get -> string!
 TerraformDotnet.Validation.PrefixConstraint.Text.init -> void
 TerraformDotnet.Validation.RequiredWhenConstraint
+TerraformDotnet.Validation.RequiredWhenConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out TerraformDotnet.Validation.VariablePredicate! Predicate) -> void
+TerraformDotnet.Validation.RequiredWhenConstraint.Equals(TerraformDotnet.Validation.RequiredWhenConstraint? other) -> bool
 TerraformDotnet.Validation.RequiredWhenConstraint.Predicate.get -> TerraformDotnet.Validation.VariablePredicate!
 TerraformDotnet.Validation.RequiredWhenConstraint.Predicate.init -> void
 TerraformDotnet.Validation.RequiredWhenConstraint.RequiredWhenConstraint(string! ErrorMessage, string! Source, TerraformDotnet.Validation.VariablePredicate! Predicate) -> void
 TerraformDotnet.Validation.SuffixConstraint
+TerraformDotnet.Validation.SuffixConstraint.Deconstruct(out string! ErrorMessage, out string! Source, out string! Text, out TerraformDotnet.Validation.ConstraintTarget Target) -> void
+TerraformDotnet.Validation.SuffixConstraint.Equals(TerraformDotnet.Validation.SuffixConstraint? other) -> bool
 TerraformDotnet.Validation.SuffixConstraint.SuffixConstraint(string! ErrorMessage, string! Source, string! Text, TerraformDotnet.Validation.ConstraintTarget Target = TerraformDotnet.Validation.ConstraintTarget.Value) -> void
 TerraformDotnet.Validation.SuffixConstraint.Target.get -> TerraformDotnet.Validation.ConstraintTarget
 TerraformDotnet.Validation.SuffixConstraint.Target.init -> void
 TerraformDotnet.Validation.SuffixConstraint.Text.get -> string!
 TerraformDotnet.Validation.SuffixConstraint.Text.init -> void
 TerraformDotnet.Validation.TerraformLiteral
+TerraformDotnet.Validation.TerraformLiteral.<Clone>$() -> TerraformDotnet.Validation.TerraformLiteral!
+TerraformDotnet.Validation.TerraformLiteral.Deconstruct(out TerraformDotnet.Hcl.Nodes.HclLiteralKind Kind, out string? Value) -> void
+TerraformDotnet.Validation.TerraformLiteral.Equals(TerraformDotnet.Validation.TerraformLiteral? other) -> bool
 TerraformDotnet.Validation.TerraformLiteral.IsNull.get -> bool
 TerraformDotnet.Validation.TerraformLiteral.Kind.get -> TerraformDotnet.Hcl.Nodes.HclLiteralKind
 TerraformDotnet.Validation.TerraformLiteral.Kind.init -> void
@@ -342,6 +511,9 @@ TerraformDotnet.Validation.ValidationReport.Results.get -> System.Collections.Ge
 TerraformDotnet.Validation.ValidationReport.TypeErrors.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
 TerraformDotnet.Validation.ValidationReport.Values.get -> System.Collections.Generic.IReadOnlyDictionary<string!, TerraformDotnet.Hcl.Evaluation.HclValue!>!
 TerraformDotnet.Validation.ValidationResult
+TerraformDotnet.Validation.ValidationResult.<Clone>$() -> TerraformDotnet.Validation.ValidationResult!
+TerraformDotnet.Validation.ValidationResult.Deconstruct(out string! VariableName, out int Index, out TerraformDotnet.Module.TerraformValidation! Validation, out TerraformDotnet.Validation.ValidationOutcome Outcome, out string? ErrorMessage, out string? Reason, out System.Collections.Generic.IReadOnlyList<string!>! ReferencedVariables) -> void
+TerraformDotnet.Validation.ValidationResult.Equals(TerraformDotnet.Validation.ValidationResult? other) -> bool
 TerraformDotnet.Validation.ValidationResult.ErrorMessage.get -> string?
 TerraformDotnet.Validation.ValidationResult.ErrorMessage.init -> void
 TerraformDotnet.Validation.ValidationResult.Index.get -> int
@@ -362,5 +534,13 @@ TerraformDotnet.Validation.VariableConstraint.ErrorMessage.get -> string!
 TerraformDotnet.Validation.VariableConstraint.ErrorMessage.init -> void
 TerraformDotnet.Validation.VariableConstraint.Source.get -> string!
 TerraformDotnet.Validation.VariableConstraint.Source.init -> void
+TerraformDotnet.Validation.VariableConstraint.VariableConstraint(TerraformDotnet.Validation.VariableConstraint! original) -> void
 TerraformDotnet.Validation.VariablePredicate
+TerraformDotnet.Validation.VariablePredicate.VariablePredicate(TerraformDotnet.Validation.VariablePredicate! original) -> void
 TerraformDotnet.Validation.VariablePredicateEvaluator
+virtual TerraformDotnet.Validation.VariableConstraint.EqualityContract.get -> System.Type!
+virtual TerraformDotnet.Validation.VariableConstraint.Equals(TerraformDotnet.Validation.VariableConstraint? other) -> bool
+virtual TerraformDotnet.Validation.VariableConstraint.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual TerraformDotnet.Validation.VariablePredicate.EqualityContract.get -> System.Type!
+virtual TerraformDotnet.Validation.VariablePredicate.Equals(TerraformDotnet.Validation.VariablePredicate? other) -> bool
+virtual TerraformDotnet.Validation.VariablePredicate.PrintMembers(System.Text.StringBuilder! builder) -> bool
