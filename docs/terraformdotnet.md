@@ -248,9 +248,12 @@ it is not inverted onto `backup_vault_id`.
 
 #### Limits
 
-- Only top-level variables are modelled. Rules on attributes of object variables (`var.lock.kind`) are `OpaqueConstraint`.
-- Predicates support comparisons with literals, `contains` over literal lists, `null` checks, boolean variables and
-  `&&`/`||`/`!`. Comparing two variables, function calls on the left side (`lower(var.x) == "a"`) and other
+- Rules on direct attributes of object variables (`var.lock.kind`) and element attributes inside `alltrue` loops
+  (`r.type`) populate `VariableConstraint.FieldName`; deeper nested paths or cross-field rules on the same variable
+  are `OpaqueConstraint`.
+- Subjects wrapped in `upper(...)`, `lower(...)`, `trimspace(...)`, `toset(...)`, or `tolist(...)` are unwrapped.
+  Predicates support comparisons with literals, `contains` over literal lists, `null` checks, boolean variables and
+  `&&`/`||`/`!`. Comparing two variables, arbitrary function calls and other
   expressions produce an `OpaqueConstraint`.
 - Nothing here replaces Terraform: the constraints drive the UI, `terraform plan` remains the source of truth.
   Use [`ModuleValidator`](#evaluating-validations) when you need every validation evaluated, not only the common idioms.

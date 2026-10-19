@@ -636,10 +636,24 @@ public class ConstraintExtractorTests
     }
 
     [Fact]
-    public void FunctionCallOnTheVariableIsOpaque()
+    public void UnsupportedFunctionCallOnTheVariableIsOpaque()
     {
         Assert.IsType<OpaqueConstraint>(
-            Assert.Single(ExtractCondition("""lower(var.x) == "a" """)));
+            Assert.Single(ExtractCondition("""substr(var.x, 0, 1) == "a" """)));
+    }
+
+    [Theory]
+    [InlineData("""lower(var.x) == "a" """, "a")]
+    [InlineData("""upper(var.x) == "A" """, "A")]
+    [InlineData("""trimspace(var.x) == "a" """, "a")]
+    public void StringWrapperOnTheVariableIsUnwrapped(string condition, string expected)
+    {
+        var allowed = Assert.IsType<AllowedValuesConstraint>(
+            Assert.Single(ExtractCondition(condition)));
+
+        Assert.Equal([expected], Strings(allowed.Values));
+        Assert.Equal(ConstraintTarget.Value, allowed.Target);
+        Assert.Null(allowed.FieldName);
     }
 
     [Fact]
@@ -763,5 +777,226 @@ public class ConstraintExtractorTests
         Assert.Null(VariablePredicateEvaluator.Evaluate(
             required.Predicate,
             new Dictionary<string, TerraformLiteral>()));
+    }
+
+    [Fact]
+    public void ObjectAndListOfObjectsConstraintsExtraction()
+    {
+        var module = Parse("""
+            variable "endpoint" {
+              type = object({
+                kind     = string
+                target   = optional(string, "")
+                provider = optional(string)
+                timeout  = optional(number, 1)
+              })
+              default = null
+
+              validation {
+                condition     = var.mode != "custom" || var.endpoint != null
+                error_message = "endpoint is required when mode is custom."
+              }
+
+              validation {
+                condition     = var.endpoint == null ? true : contains(["HTTP", "GRPC", "TCP"], upper(var.endpoint.kind))
+                error_message = "endpoint.kind must be HTTP, GRPC, or TCP."
+              }
+
+              validation {
+                condition = var.endpoint == null ? true : (
+                  upper(var.endpoint.kind) == "TCP"
+                  ? length(trimspace(var.endpoint.provider)) > 0
+                  : length(trimspace(var.endpoint.target)) > 0
+                )
+                error_message = "endpoint must specify provider for TCP or target otherwise."
+              }
+
+              validation {
+                condition = var.endpoint == null ? true : (
+                  var.endpoint.timeout == 1 ||
+                  (var.endpoint.timeout >= 10 && var.endpoint.timeout <= 300)
+                )
+                error_message = "endpoint.timeout must be 1 or between 10 and 300."
+              }
+            }
+
+            variable "items" {
+              type = list(object({
+                name     = string
+                kind     = string
+                provider = optional(string)
+              }))
+              default = []
+
+              validation {
+                condition     = alltrue([for r in var.items : contains(["HTTP", "GRPC", "TCP"], upper(r.kind))])
+                error_message = "items[*].kind must be HTTP, GRPC, or TCP."
+              }
+
+              validation {
+                condition = alltrue([
+                  for r in var.items : (
+                    r.provider != null
+                    ? (lower(r.provider) == "alpha" || lower(r.provider) == "beta")
+                    : true
+                  )
+                ])
+                error_message = "items[*].provider must be alpha or beta."
+              }
+            }
+            """);
+
+        var all = ConstraintExtractor.ExtractAll(module);
+
+        Assert.Collection(
+            all["endpoint"],
+            c =>
+            {
+                var required = Assert.IsType<RequiredWhenConstraint>(c);
+                var predicate = Assert.IsType<ComparePredicate>(required.Predicate);
+                Assert.Equal("mode", predicate.Variable);
+                Assert.Equal(CompareOperator.Equal, predicate.Operator);
+                Assert.Equal("custom", predicate.Value.Value);
+                Assert.Null(required.FieldName);
+            },
+            c =>
+            {
+                var allowed = Assert.IsType<AllowedValuesConstraint>(c);
+                Assert.Equal(ConstraintTarget.Value, allowed.Target);
+                Assert.Equal("kind", allowed.FieldName);
+                Assert.Equal(["HTTP", "GRPC", "TCP"], Strings(allowed.Values));
+            },
+            c => Assert.IsType<OpaqueConstraint>(c),
+            c => Assert.IsType<OpaqueConstraint>(c));
+
+        Assert.Collection(
+            all["items"],
+            c =>
+            {
+                var allowed = Assert.IsType<AllowedValuesConstraint>(c);
+                Assert.Equal(ConstraintTarget.Elements, allowed.Target);
+                Assert.Equal("kind", allowed.FieldName);
+                Assert.Equal(["HTTP", "GRPC", "TCP"], Strings(allowed.Values));
+            },
+            c =>
+            {
+                var allowed = Assert.IsType<AllowedValuesConstraint>(c);
+                Assert.Equal(ConstraintTarget.Elements, allowed.Target);
+                Assert.Equal("provider", allowed.FieldName);
+                Assert.Equal(["alpha", "beta"], Strings(allowed.Values));
+            });
+    }
+
+    // ── Object fields and string wrappers ───────────────────────
+
+    [Fact]
+    public void ObjectPropertyWithNullGuardAndUpperBecomesAllowedValues()
+    {
+        var constraint = Assert.IsType<AllowedValuesConstraint>(
+            Assert.Single(ExtractCondition(
+                """var.x == null ? true : contains(["HTTP", "GRPC", "TCP"], upper(var.x.kind))""",
+                "object({ kind = string })")));
+
+        Assert.Equal(ConstraintTarget.Value, constraint.Target);
+        Assert.Equal("kind", constraint.FieldName);
+        Assert.Equal(["HTTP", "GRPC", "TCP"], Strings(constraint.Values));
+    }
+
+    [Fact]
+    public void ObjectPropertyNumericRangeWithNullGuardIsMerged()
+    {
+        var range = Assert.IsType<NumericRangeConstraint>(
+            Assert.Single(ExtractCondition(
+                "var.x == null ? true : (var.x.timeout >= 10 && var.x.timeout <= 300)",
+                "object({ timeout = number })")));
+
+        Assert.Equal(ConstraintTarget.Value, range.Target);
+        Assert.Equal("timeout", range.FieldName);
+        Assert.Equal(10m, range.Min);
+        Assert.True(range.MinInclusive);
+        Assert.Equal(300m, range.Max);
+        Assert.True(range.MaxInclusive);
+    }
+
+    [Fact]
+    public void ObjectPropertyLengthWithTrimspaceIsMerged()
+    {
+        var length = Assert.IsType<LengthConstraint>(
+            Assert.Single(ExtractCondition(
+                "var.x == null ? true : (length(trimspace(var.x.name)) >= 1 && length(trimspace(var.x.name)) <= 63)",
+                "object({ name = string })")));
+
+        Assert.Equal(ConstraintTarget.Value, length.Target);
+        Assert.Equal("name", length.FieldName);
+        Assert.Equal(1, length.Min);
+        Assert.Equal(63, length.Max);
+    }
+
+    [Fact]
+    public void ListOfObjectAllTrueContainsWithUpperBecomesElementAllowedValues()
+    {
+        var constraint = Assert.IsType<AllowedValuesConstraint>(
+            Assert.Single(ExtractCondition(
+                """alltrue([for r in var.x : contains(["HTTP", "GRPC", "TCP"], upper(r.kind))])""",
+                "list(object({ kind = string }))")));
+
+        Assert.Equal(ConstraintTarget.Elements, constraint.Target);
+        Assert.Equal("kind", constraint.FieldName);
+        Assert.Equal(["HTTP", "GRPC", "TCP"], Strings(constraint.Values));
+    }
+
+    [Fact]
+    public void ListOfObjectAllTrueNullGuardedEqualityChainWithLowerBecomesElementAllowedValues()
+    {
+        var constraint = Assert.IsType<AllowedValuesConstraint>(
+            Assert.Single(ExtractCondition(
+                """alltrue([for r in var.x : r.provider != null ? (lower(r.provider) == "alpha" || lower(r.provider) == "beta") : true])""",
+                "list(object({ provider = optional(string) }))")));
+
+        Assert.Equal(ConstraintTarget.Elements, constraint.Target);
+        Assert.Equal("provider", constraint.FieldName);
+        Assert.Equal(["alpha", "beta"], Strings(constraint.Values));
+    }
+
+    [Theory]
+    [InlineData("""var.x == null ? true : (upper(var.x.kind) == "TCP" ? length(trimspace(var.x.provider)) > 0 : true)""")]
+    [InlineData("""var.x == null ? true : (var.x.kind == null ? true : length(trimspace(var.x.provider)) > 0)""")]
+    [InlineData("""var.x.a == "foo" || var.x.b == "bar" """)]
+    public void CrossFieldConditionOnSameVariableIsOpaque(string condition)
+    {
+        Assert.IsType<OpaqueConstraint>(
+            Assert.Single(ExtractCondition(condition, "object({ kind = string, provider = optional(string), a = string, b = string })")));
+    }
+
+    [Fact]
+    public void BoundsOnDifferentObjectFieldsAreOnlyMergedPerField()
+    {
+        var constraints = ExtractCondition(
+            "var.x.min >= 1 && var.x.max <= 10 && var.x.timeout >= 10 && var.x.timeout <= 300",
+            "object({ min = number, max = number, timeout = number })");
+
+        Assert.Collection(
+            constraints,
+            c =>
+            {
+                var range = Assert.IsType<NumericRangeConstraint>(c);
+                Assert.Equal("min", range.FieldName);
+                Assert.Equal(1m, range.Min);
+                Assert.Null(range.Max);
+            },
+            c =>
+            {
+                var range = Assert.IsType<NumericRangeConstraint>(c);
+                Assert.Equal("max", range.FieldName);
+                Assert.Null(range.Min);
+                Assert.Equal(10m, range.Max);
+            },
+            c =>
+            {
+                var range = Assert.IsType<NumericRangeConstraint>(c);
+                Assert.Equal("timeout", range.FieldName);
+                Assert.Equal(10m, range.Min);
+                Assert.Equal(300m, range.Max);
+            });
     }
 }

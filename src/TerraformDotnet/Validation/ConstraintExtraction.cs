@@ -12,7 +12,6 @@ internal sealed class ConstraintExtraction
     private readonly string _self;
     private readonly IReadOnlyDictionary<string, HclExpression> _locals;
     private readonly string _errorMessage;
-    private readonly Subject _valueSubject;
 
     public ConstraintExtraction(
         string self,
@@ -22,7 +21,6 @@ internal sealed class ConstraintExtraction
         _self = self;
         _locals = locals;
         _errorMessage = errorMessage;
-        _valueSubject = new Subject(IsSelf, ConstraintTarget.Value);
     }
 
     /// <summary>
@@ -35,54 +33,149 @@ internal sealed class ConstraintExtraction
 
         foreach (var conjunct in ExpressionAnalysis.FlattenAnd(ExpressionNormalizer.Normalize(condition)))
         {
-            results.AddRange(ExtractConjunct(conjunct));
+            results.AddRange(ExtractConjunct(conjunct, loopVariable: null) ?? [Opaque(conjunct)]);
         }
 
         return Merge(results);
     }
 
-    private List<VariableConstraint> ExtractConjunct(HclExpression conjunct)
+    /// <summary>
+    /// Extracts constraints inside a nested scope (such as a null-guarded branch, cross-variable
+    /// consequent, or <c>alltrue</c> loop body), returning <c>null</c> when any conjunct cannot be classified.
+    /// </summary>
+    private List<VariableConstraint>? ExtractInScope(HclExpression expression, string? loopVariable)
+    {
+        var results = new List<VariableConstraint>();
+
+        foreach (var conjunct in ExpressionAnalysis.FlattenAnd(ExpressionNormalizer.Normalize(expression)))
+        {
+            var extracted = ExtractConjunct(conjunct, loopVariable);
+
+            if (extracted is null || extracted.Any(c => c is OpaqueConstraint))
+            {
+                return null;
+            }
+
+            results.AddRange(extracted);
+        }
+
+        return Merge(results);
+    }
+
+    private List<VariableConstraint>? ExtractConjunct(HclExpression conjunct, string? loopVariable)
     {
         var disjuncts = ExpressionAnalysis.FlattenOr(conjunct);
 
-        // `var.self == null || <rest>`: the guard only says "null is fine", the rest is the real rule.
-        var guardIndex = disjuncts.FindIndex(IsSelfNullCheck);
-
-        if (guardIndex >= 0 && disjuncts.Count > 1)
+        // `var.self == null || <rest>` or `r.field == null || <rest>`: the guard only says "null is fine",
+        // the rest is the real rule as long as any field-specific guard matches the constrained field.
+        if (disjuncts.Count > 1
+            && TryStripNullGuards(disjuncts, loopVariable, out var remaining, out var guardedFields))
         {
-            disjuncts.RemoveAt(guardIndex);
+            var rest = ExpressionAnalysis.BuildBinary(HclBinaryOperator.Or, remaining);
+            var guarded = ExtractInScope(rest, loopVariable);
 
-            return Extract(ExpressionAnalysis.BuildBinary(HclBinaryOperator.Or, disjuncts));
+            if (guarded is { Count: > 0 } && GuardsMatchFields(guardedFields, guarded))
+            {
+                return guarded;
+            }
         }
 
-        var references = new List<string>();
-        ExpressionAnalysis.CollectVariableReferences(conjunct, references);
-
-        if (references.Any(name => name != _self))
+        if (loopVariable is null)
         {
-            return ExtractCrossVariable(conjunct, disjuncts);
+            var references = new List<string>();
+            ExpressionAnalysis.CollectVariableReferences(conjunct, references);
+
+            if (references.Any(name => name != _self))
+            {
+                return ExtractCrossVariable(conjunct, disjuncts);
+            }
+
+            if (references.Count == 0)
+            {
+                return null;
+            }
         }
 
-        if (references.Count == 0)
-        {
-            return [Opaque(conjunct)];
-        }
-
-        var single = TryRecognize(conjunct, _valueSubject);
+        var single = TryRecognize(conjunct, loopVariable);
 
         if (single is not null)
         {
             return [single];
         }
 
-        return TryAllTrue(conjunct) ?? [Opaque(conjunct)];
+        return loopVariable is null ? TryAllTrue(conjunct) : null;
+    }
+
+    private bool TryStripNullGuards(
+        List<HclExpression> disjuncts,
+        string? loopVariable,
+        out List<HclExpression> remaining,
+        out HashSet<string?> guardedFields)
+    {
+        remaining = [];
+        guardedFields = new HashSet<string?>(StringComparer.Ordinal);
+
+        foreach (var disjunct in disjuncts)
+        {
+            if (IsNullGuard(disjunct, loopVariable, out var fieldName))
+            {
+                guardedFields.Add(fieldName);
+            }
+            else
+            {
+                remaining.Add(disjunct);
+            }
+        }
+
+        return guardedFields.Count > 0 && remaining.Count > 0;
+    }
+
+    private static bool GuardsMatchFields(
+        HashSet<string?> guardedFields,
+        List<VariableConstraint> candidates)
+    {
+        foreach (var candidate in candidates)
+        {
+            if (candidate is NotNullConstraint && guardedFields.Contains(candidate.FieldName))
+            {
+                return false;
+            }
+        }
+
+        foreach (var guardedField in guardedFields)
+        {
+            if (guardedField is not null
+                && candidates.Any(c => !string.Equals(c.FieldName, guardedField, StringComparison.Ordinal)))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool IsNullGuard(HclExpression expression, string? loopVariable, out string? fieldName)
+    {
+        if (expression is HclBinaryExpression { Operator: HclBinaryOperator.Equal } equality
+            && TryGetLiteralOperand(equality, loopVariable, out var literal, out var subject)
+            && literal.IsNull
+            && !subject.HasWrapper)
+        {
+            fieldName = subject.FieldName;
+
+            return true;
+        }
+
+        fieldName = null;
+
+        return false;
     }
 
     /// <summary>
     /// Handles rules that mix this variable with others by rewriting <c>a || b || ...</c> into the
     /// implication <c>P =&gt; Q</c>, where <c>P</c> only talks about other variables and <c>Q</c> only about this one.
     /// </summary>
-    private List<VariableConstraint> ExtractCrossVariable(HclExpression conjunct, List<HclExpression> disjuncts)
+    private List<VariableConstraint>? ExtractCrossVariable(HclExpression conjunct, List<HclExpression> disjuncts)
     {
         var selfParts = new List<HclExpression>();
         var otherParts = new List<HclExpression>();
@@ -94,7 +187,7 @@ internal sealed class ConstraintExtraction
 
             if (references.Count == 0)
             {
-                return [Opaque(conjunct)];
+                return null;
             }
 
             if (references.All(name => name == _self))
@@ -107,13 +200,13 @@ internal sealed class ConstraintExtraction
             }
             else
             {
-                return [Opaque(conjunct)];
+                return null;
             }
         }
 
         if (selfParts.Count == 0 || otherParts.Count == 0)
         {
-            return [Opaque(conjunct)];
+            return null;
         }
 
         // ¬(o1 ∨ o2 ...) = ¬o1 ∧ ¬o2 ...
@@ -125,18 +218,18 @@ internal sealed class ConstraintExtraction
 
             if (predicate is null)
             {
-                return [Opaque(conjunct)];
+                return null;
             }
 
             negated.Add(PredicateBuilder.Negate(predicate));
         }
 
         var antecedent = PredicateBuilder.MakeAnd(negated);
-        var inner = Extract(ExpressionAnalysis.BuildBinary(HclBinaryOperator.Or, selfParts));
+        var inner = ExtractInScope(ExpressionAnalysis.BuildBinary(HclBinaryOperator.Or, selfParts), loopVariable: null);
 
-        if (inner.Any(constraint => constraint is OpaqueConstraint))
+        if (inner is null || inner.Count == 0)
         {
-            return [Opaque(conjunct)];
+            return null;
         }
 
         var source = SourceOf(conjunct);
@@ -144,79 +237,92 @@ internal sealed class ConstraintExtraction
 
         foreach (var constraint in inner)
         {
-            results.Add(constraint is NotNullConstraint
-                ? new RequiredWhenConstraint(_errorMessage, source, antecedent)
-                : new ConditionalConstraint(_errorMessage, source, antecedent, constraint));
+            results.Add(constraint is NotNullConstraint notNull
+                ? new RequiredWhenConstraint(_errorMessage, source, antecedent, notNull.FieldName)
+                : new ConditionalConstraint(_errorMessage, source, antecedent, constraint, constraint.FieldName));
         }
 
         return results;
     }
 
-    private VariableConstraint? TryRecognize(HclExpression expression, Subject subject)
+    private VariableConstraint? TryRecognize(HclExpression expression, string? loopVariable)
     {
-        VariableConstraint? constraint = TryAllowedValues(expression, subject);
-        constraint ??= TryDisallowedValues(expression, subject);
-        constraint ??= TryNumericRange(expression, subject);
-        constraint ??= TryLength(expression, subject);
-        constraint ??= TryPattern(expression, subject);
-        constraint ??= TryAffix(expression, subject);
-        constraint ??= TryNotNull(expression, subject);
-        constraint ??= TrySetSubtract(expression, subject);
+        VariableConstraint? constraint = TryAllowedValues(expression, loopVariable);
+        constraint ??= TryDisallowedValues(expression, loopVariable);
+        constraint ??= TryNumericRange(expression, loopVariable);
+        constraint ??= TryLength(expression, loopVariable);
+        constraint ??= TryPattern(expression, loopVariable);
+        constraint ??= TryAffix(expression, loopVariable);
+        constraint ??= TryNotNull(expression, loopVariable);
+        constraint ??= TrySetSubtract(expression, loopVariable);
 
         return constraint;
     }
 
-    private AllowedValuesConstraint? TryAllowedValues(HclExpression expression, Subject subject)
+    private AllowedValuesConstraint? TryAllowedValues(HclExpression expression, string? loopVariable)
     {
         if (ExpressionAnalysis.TryGetFunction(expression, "contains", 2, out var args)
-            && subject.Matches(args[1])
+            && TryMatchSubject(args[1], loopVariable, out var subject)
             && ExpressionAnalysis.TryResolveLiteralList(args[0], _locals, out var listed))
         {
-            return new AllowedValuesConstraint(_errorMessage, SourceOf(expression), listed, subject.Target);
+            return new AllowedValuesConstraint(_errorMessage, SourceOf(expression), listed, subject.Target, subject.FieldName);
         }
 
         // var.x == "a" || var.x == "b"
         var values = new List<TerraformLiteral>();
+        SubjectMatch? commonSubject = null;
 
         foreach (var disjunct in ExpressionAnalysis.FlattenOr(expression))
         {
             if (disjunct is not HclBinaryExpression { Operator: HclBinaryOperator.Equal } equality
-                || !TryGetLiteralOperand(equality, subject, out var literal)
+                || !TryGetLiteralOperand(equality, loopVariable, out var literal, out var disjunctSubject)
                 || literal.IsNull)
             {
                 return null;
             }
 
+            if (commonSubject is { } existing && !SameSubjectTarget(existing, disjunctSubject))
+            {
+                return null;
+            }
+
+            commonSubject = disjunctSubject;
             values.Add(literal);
         }
 
-        return new AllowedValuesConstraint(_errorMessage, SourceOf(expression), values, subject.Target);
+        if (commonSubject is not { } matched || values.Count == 0)
+        {
+            return null;
+        }
+
+        return new AllowedValuesConstraint(_errorMessage, SourceOf(expression), values, matched.Target, matched.FieldName);
     }
 
-    private DisallowedValuesConstraint? TryDisallowedValues(HclExpression expression, Subject subject)
+    private DisallowedValuesConstraint? TryDisallowedValues(HclExpression expression, string? loopVariable)
     {
         if (expression is HclUnaryExpression { Operator: HclUnaryOperator.Not } not
             && ExpressionAnalysis.TryGetFunction(not.Operand, "contains", 2, out var args)
-            && subject.Matches(args[1])
+            && TryMatchSubject(args[1], loopVariable, out var subject)
             && ExpressionAnalysis.TryResolveLiteralList(args[0], _locals, out var listed))
         {
-            return new DisallowedValuesConstraint(_errorMessage, SourceOf(expression), listed, subject.Target);
+            return new DisallowedValuesConstraint(_errorMessage, SourceOf(expression), listed, subject.Target, subject.FieldName);
         }
 
         if (expression is HclBinaryExpression { Operator: HclBinaryOperator.NotEqual } inequality
-            && TryGetLiteralOperand(inequality, subject, out var literal)
+            && TryGetLiteralOperand(inequality, loopVariable, out var literal, out var neqSubject)
             && !literal.IsNull)
         {
-            return new DisallowedValuesConstraint(_errorMessage, SourceOf(expression), [literal], subject.Target);
+            return new DisallowedValuesConstraint(_errorMessage, SourceOf(expression), [literal], neqSubject.Target, neqSubject.FieldName);
         }
 
         return null;
     }
 
-    private NumericRangeConstraint? TryNumericRange(HclExpression expression, Subject subject)
+    private NumericRangeConstraint? TryNumericRange(HclExpression expression, string? loopVariable)
     {
         if (expression is not HclBinaryExpression binary
-            || !TryOrient(binary, subject.Matches, out _, out var other, out var op)
+            || !TryOrient(binary, side => TryMatchSubject(side, loopVariable, out _), out var subjectSide, out var other, out var op)
+            || !TryMatchSubject(subjectSide, loopVariable, out var subject)
             || !ExpressionAnalysis.TryGetNumber(other, out var number))
         {
             return null;
@@ -226,18 +332,19 @@ internal sealed class ConstraintExtraction
 
         return op switch
         {
-            HclBinaryOperator.GreaterThan => new NumericRangeConstraint(_errorMessage, source, number, false, null, false, subject.Target),
-            HclBinaryOperator.GreaterEqual => new NumericRangeConstraint(_errorMessage, source, number, true, null, false, subject.Target),
-            HclBinaryOperator.LessThan => new NumericRangeConstraint(_errorMessage, source, null, false, number, false, subject.Target),
-            HclBinaryOperator.LessEqual => new NumericRangeConstraint(_errorMessage, source, null, false, number, true, subject.Target),
+            HclBinaryOperator.GreaterThan => new NumericRangeConstraint(_errorMessage, source, number, false, null, false, subject.Target, subject.FieldName),
+            HclBinaryOperator.GreaterEqual => new NumericRangeConstraint(_errorMessage, source, number, true, null, false, subject.Target, subject.FieldName),
+            HclBinaryOperator.LessThan => new NumericRangeConstraint(_errorMessage, source, null, false, number, false, subject.Target, subject.FieldName),
+            HclBinaryOperator.LessEqual => new NumericRangeConstraint(_errorMessage, source, null, false, number, true, subject.Target, subject.FieldName),
             _ => null,
         };
     }
 
-    private LengthConstraint? TryLength(HclExpression expression, Subject subject)
+    private LengthConstraint? TryLength(HclExpression expression, string? loopVariable)
     {
         if (expression is not HclBinaryExpression binary
-            || !TryOrient(binary, side => IsLengthOf(side, subject), out _, out var other, out var op)
+            || !TryOrient(binary, side => TryMatchLengthOf(side, loopVariable, out _), out var lengthSide, out var other, out var op)
+            || !TryMatchLengthOf(lengthSide, loopVariable, out var subject)
             || !ExpressionAnalysis.TryGetInteger(other, out var n))
         {
             return null;
@@ -278,69 +385,70 @@ internal sealed class ConstraintExtraction
             return null;
         }
 
-        return new LengthConstraint(_errorMessage, SourceOf(expression), (int?)min, (int?)max, subject.Target);
+        return new LengthConstraint(_errorMessage, SourceOf(expression), (int?)min, (int?)max, subject.Target, subject.FieldName);
     }
 
-    private PatternConstraint? TryPattern(HclExpression expression, Subject subject)
+    private PatternConstraint? TryPattern(HclExpression expression, string? loopVariable)
     {
         // can(regex("<pattern>", var.x))
         if (ExpressionAnalysis.TryGetFunction(expression, "can", 1, out var canArgs)
             && ExpressionAnalysis.TryGetFunction(canArgs[0], "regex", 2, out var regexArgs)
             && ExpressionAnalysis.TryGetString(regexArgs[0], out var pattern)
-            && subject.Matches(regexArgs[1]))
+            && TryMatchSubject(regexArgs[1], loopVariable, out var subject))
         {
-            return new PatternConstraint(_errorMessage, SourceOf(expression), pattern, subject.Target);
+            return new PatternConstraint(_errorMessage, SourceOf(expression), pattern, subject.Target, subject.FieldName);
         }
 
         // length(regexall("<pattern>", var.x)) > 0
         if (expression is HclBinaryExpression binary
-            && TryOrient(binary, side => TryGetRegexAll(side, subject, out _), out var matchesSide, out var other, out var op)
-            && TryGetRegexAll(matchesSide, subject, out var allPattern)
+            && TryOrient(binary, side => TryGetRegexAll(side, loopVariable, out _, out _), out var matchesSide, out var other, out var op)
+            && TryGetRegexAll(matchesSide, loopVariable, out var allPattern, out var regexSubject)
             && ExpressionAnalysis.TryGetInteger(other, out var n)
             && IsAtLeastOne(op, n))
         {
-            return new PatternConstraint(_errorMessage, SourceOf(expression), allPattern, subject.Target);
+            return new PatternConstraint(_errorMessage, SourceOf(expression), allPattern, regexSubject.Target, regexSubject.FieldName);
         }
 
         return null;
     }
 
-    private VariableConstraint? TryAffix(HclExpression expression, Subject subject)
+    private VariableConstraint? TryAffix(HclExpression expression, string? loopVariable)
     {
         if (ExpressionAnalysis.TryGetFunction(expression, "startswith", 2, out var prefixArgs)
-            && subject.Matches(prefixArgs[0])
+            && TryMatchSubject(prefixArgs[0], loopVariable, out var prefixSubject)
             && ExpressionAnalysis.TryGetString(prefixArgs[1], out var prefix))
         {
-            return new PrefixConstraint(_errorMessage, SourceOf(expression), prefix, subject.Target);
+            return new PrefixConstraint(_errorMessage, SourceOf(expression), prefix, prefixSubject.Target, prefixSubject.FieldName);
         }
 
         if (ExpressionAnalysis.TryGetFunction(expression, "endswith", 2, out var suffixArgs)
-            && subject.Matches(suffixArgs[0])
+            && TryMatchSubject(suffixArgs[0], loopVariable, out var suffixSubject)
             && ExpressionAnalysis.TryGetString(suffixArgs[1], out var suffix))
         {
-            return new SuffixConstraint(_errorMessage, SourceOf(expression), suffix, subject.Target);
+            return new SuffixConstraint(_errorMessage, SourceOf(expression), suffix, suffixSubject.Target, suffixSubject.FieldName);
         }
 
         return null;
     }
 
-    private NotNullConstraint? TryNotNull(HclExpression expression, Subject subject)
+    private NotNullConstraint? TryNotNull(HclExpression expression, string? loopVariable)
     {
-        if (subject.Target == ConstraintTarget.Value
+        if (loopVariable is null
             && expression is HclBinaryExpression { Operator: HclBinaryOperator.NotEqual } inequality
-            && TryGetLiteralOperand(inequality, subject, out var literal)
-            && literal.IsNull)
+            && TryGetLiteralOperand(inequality, loopVariable: null, out var literal, out var subject)
+            && literal.IsNull
+            && !subject.HasWrapper)
         {
-            return new NotNullConstraint(_errorMessage, SourceOf(expression));
+            return new NotNullConstraint(_errorMessage, SourceOf(expression), subject.FieldName);
         }
 
         return null;
     }
 
     // length(setsubtract(var.x, ["a", "b"])) == 0  →  every element is "a" or "b"
-    private AllowedValuesConstraint? TrySetSubtract(HclExpression expression, Subject subject)
+    private AllowedValuesConstraint? TrySetSubtract(HclExpression expression, string? loopVariable)
     {
-        if (subject.Target != ConstraintTarget.Value
+        if (loopVariable is not null
             || expression is not HclBinaryExpression { Operator: HclBinaryOperator.Equal } equality)
         {
             return null;
@@ -354,72 +462,194 @@ internal sealed class ConstraintExtraction
             || zero != 0
             || !ExpressionAnalysis.TryGetFunction(call, "length", 1, out var lengthArgs)
             || !ExpressionAnalysis.TryGetFunction(lengthArgs[0], "setsubtract", 2, out var subtractArgs)
-            || !IsSubjectOrConversion(subtractArgs[0], subject)
+            || !TryMatchSubject(subtractArgs[0], loopVariable: null, out var subject)
             || !ExpressionAnalysis.TryResolveLiteralList(subtractArgs[1], _locals, out var allowed))
         {
             return null;
         }
 
-        return new AllowedValuesConstraint(_errorMessage, SourceOf(expression), allowed, ConstraintTarget.Elements);
+        return new AllowedValuesConstraint(_errorMessage, SourceOf(expression), allowed, ConstraintTarget.Elements, subject.FieldName);
     }
 
     // alltrue([for v in var.x : <rule on v>])  →  the rule applies to every element
     private List<VariableConstraint>? TryAllTrue(HclExpression expression)
     {
         if (!ExpressionAnalysis.TryGetFunction(expression, "alltrue", 1, out var args)
-            || args[0] is not HclForExpression { IsObjectFor: false, Condition: null } forExpression
-            || !_valueSubject.Matches(forExpression.Collection))
+            || args[0] is not HclForExpression { IsObjectFor: false } forExpression
+            || !TryMatchSubject(forExpression.Collection, loopVariable: null, out var collectionSubject)
+            || collectionSubject is not { Target: ConstraintTarget.Value, FieldName: null, HasWrapper: false })
         {
             return null;
         }
 
         var loopVariable = forExpression.ValueVariable ?? forExpression.KeyVariable;
-        var elementSubject = new Subject(
-            candidate => candidate is HclVariableExpression variable && variable.Name == loopVariable,
-            ConstraintTarget.Elements);
+        string? conditionField = null;
 
-        var results = new List<VariableConstraint>();
-        var body = ExpressionNormalizer.Normalize(forExpression.ValueExpression);
-
-        foreach (var conjunct in ExpressionAnalysis.FlattenAnd(body))
+        if (forExpression.Condition is not null
+            && !IsLoopNotNullCondition(forExpression.Condition, loopVariable, out conditionField))
         {
-            var constraint = TryRecognize(conjunct, elementSubject);
-
-            if (constraint is null)
-            {
-                return null;
-            }
-
-            results.Add(constraint);
+            return null;
         }
 
-        return results;
+        var extracted = ExtractInScope(forExpression.ValueExpression, loopVariable);
+
+        if (extracted is null || extracted.Count == 0)
+        {
+            return null;
+        }
+
+        if (conditionField is not null
+            && extracted.Any(c => !string.Equals(c.FieldName, conditionField, StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
+        return extracted;
     }
 
-    private bool IsSelf(HclExpression expression) =>
-        ExpressionAnalysis.TryGetVariableName(expression, out var name) && name == _self;
+    private bool IsLoopNotNullCondition(HclExpression condition, string loopVariable, out string? fieldName)
+    {
+        if (condition is HclBinaryExpression { Operator: HclBinaryOperator.NotEqual } inequality
+            && TryGetLiteralOperand(inequality, loopVariable, out var literal, out var subject)
+            && literal.IsNull
+            && !subject.HasWrapper)
+        {
+            fieldName = subject.FieldName;
 
-    private bool IsSelfNullCheck(HclExpression expression) =>
-        expression is HclBinaryExpression { Operator: HclBinaryOperator.Equal } equality
-        && TryGetLiteralOperand(equality, _valueSubject, out var literal)
-        && literal.IsNull;
+            return true;
+        }
 
-    private static bool IsSubjectOrConversion(HclExpression expression, Subject subject) =>
-        subject.Matches(expression)
-        || (expression is HclFunctionCallExpression { Name: "toset" or "tolist", Arguments.Count: 1 } conversion
-            && subject.Matches(conversion.Arguments[0]));
+        fieldName = null;
 
-    private static bool IsLengthOf(HclExpression expression, Subject subject) =>
-        ExpressionAnalysis.TryGetFunction(expression, "length", 1, out var args) && subject.Matches(args[0]);
+        return false;
+    }
 
-    private static bool TryGetRegexAll(HclExpression expression, Subject subject, out string pattern)
+    private bool TryMatchSubject(
+        HclExpression expression,
+        string? loopVariable,
+        out SubjectMatch subject)
+    {
+        var current = UnwrapSubjectConversions(expression, out var hasWrapper);
+
+        return loopVariable is not null
+            ? TryMatchLoopSubject(current, loopVariable, hasWrapper, out subject)
+            : TryMatchVariableSubject(current, hasWrapper, out subject);
+    }
+
+    private static HclExpression UnwrapSubjectConversions(HclExpression expression, out bool hasWrapper)
+    {
+        hasWrapper = false;
+        var current = expression;
+
+        while (current is HclFunctionCallExpression { ExpandFinalArgument: false, Arguments.Count: 1 } call)
+        {
+            switch (call.Name)
+            {
+                case "upper" or "lower" or "trimspace":
+                    hasWrapper = true;
+                    current = call.Arguments[0];
+                    break;
+
+                case "toset" or "tolist":
+                    current = call.Arguments[0];
+                    break;
+
+                default:
+                    return current;
+            }
+        }
+
+        return current;
+    }
+
+    private static bool TryMatchLoopSubject(
+        HclExpression current,
+        string loopVariable,
+        bool hasWrapper,
+        out SubjectMatch subject)
+    {
+        if (current is HclVariableExpression { Name: var loopName }
+            && string.Equals(loopName, loopVariable, StringComparison.Ordinal))
+        {
+            subject = new SubjectMatch(ConstraintTarget.Elements, null, hasWrapper);
+
+            return true;
+        }
+
+        if (current is HclAttributeAccessExpression
+            {
+                Source: HclVariableExpression { Name: var sourceLoopName },
+                Name: var elementFieldName,
+            }
+            && string.Equals(sourceLoopName, loopVariable, StringComparison.Ordinal))
+        {
+            subject = new SubjectMatch(ConstraintTarget.Elements, elementFieldName, hasWrapper);
+
+            return true;
+        }
+
+        subject = default;
+
+        return false;
+    }
+
+    private bool TryMatchVariableSubject(
+        HclExpression current,
+        bool hasWrapper,
+        out SubjectMatch subject)
+    {
+        if (ExpressionAnalysis.TryGetVariableName(current, out var varName)
+            && string.Equals(varName, _self, StringComparison.Ordinal))
+        {
+            subject = new SubjectMatch(ConstraintTarget.Value, null, hasWrapper);
+
+            return true;
+        }
+
+        if (current is HclAttributeAccessExpression { Source: var attrSource, Name: var fieldName }
+            && ExpressionAnalysis.TryGetVariableName(attrSource, out var ownerVarName)
+            && string.Equals(ownerVarName, _self, StringComparison.Ordinal))
+        {
+            subject = new SubjectMatch(ConstraintTarget.Value, fieldName, hasWrapper);
+
+            return true;
+        }
+
+        subject = default;
+
+        return false;
+    }
+
+    private static bool SameSubjectTarget(SubjectMatch first, SubjectMatch second) =>
+        first.Target == second.Target
+        && string.Equals(first.FieldName, second.FieldName, StringComparison.Ordinal);
+
+    private bool TryMatchLengthOf(HclExpression expression, string? loopVariable, out SubjectMatch subject)
+    {
+        if (ExpressionAnalysis.TryGetFunction(expression, "length", 1, out var args)
+            && TryMatchSubject(args[0], loopVariable, out subject))
+        {
+            return true;
+        }
+
+        subject = default;
+
+        return false;
+    }
+
+    private bool TryGetRegexAll(
+        HclExpression expression,
+        string? loopVariable,
+        out string pattern,
+        out SubjectMatch subject)
     {
         pattern = string.Empty;
+        subject = default;
 
         return ExpressionAnalysis.TryGetFunction(expression, "length", 1, out var lengthArgs)
             && ExpressionAnalysis.TryGetFunction(lengthArgs[0], "regexall", 2, out var regexArgs)
             && ExpressionAnalysis.TryGetString(regexArgs[0], out pattern)
-            && subject.Matches(regexArgs[1]);
+            && TryMatchSubject(regexArgs[1], loopVariable, out subject);
     }
 
     /// <summary>Whether <c>length(matches) op n</c> means "at least one match".</summary>
@@ -474,19 +704,26 @@ internal sealed class ConstraintExtraction
         return false;
     }
 
-    private static bool TryGetLiteralOperand(HclBinaryExpression binary, Subject subject, out TerraformLiteral literal)
+    private bool TryGetLiteralOperand(
+        HclBinaryExpression binary,
+        string? loopVariable,
+        out TerraformLiteral literal,
+        out SubjectMatch subject)
     {
-        if (subject.Matches(binary.Left) && TerraformLiteral.TryFromExpression(binary.Right, out literal))
+        if (TryMatchSubject(binary.Left, loopVariable, out subject)
+            && TerraformLiteral.TryFromExpression(binary.Right, out literal))
         {
             return true;
         }
 
-        if (subject.Matches(binary.Right) && TerraformLiteral.TryFromExpression(binary.Left, out literal))
+        if (TryMatchSubject(binary.Right, loopVariable, out subject)
+            && TerraformLiteral.TryFromExpression(binary.Left, out literal))
         {
             return true;
         }
 
         literal = TerraformLiteral.Null;
+        subject = default;
 
         return false;
     }
@@ -501,85 +738,108 @@ internal sealed class ConstraintExtraction
     /// </summary>
     private static List<VariableConstraint> Merge(List<VariableConstraint> constraints)
     {
-        foreach (var target in Enum.GetValues<ConstraintTarget>())
-        {
-            MergeDisallowed(constraints, target);
-            MergeBounds(
-                constraints,
-                c => c is NumericRangeConstraint { Min: not null, Max: null } r && r.Target == target,
-                c => c is NumericRangeConstraint { Min: null, Max: not null } r && r.Target == target,
-                (lower, upper) =>
-                {
-                    var low = (NumericRangeConstraint)lower;
-                    var high = (NumericRangeConstraint)upper;
-
-                    return low with
-                    {
-                        Source = $"{low.Source} && {high.Source}",
-                        Max = high.Max,
-                        MaxInclusive = high.MaxInclusive,
-                    };
-                });
-            MergeBounds(
-                constraints,
-                c => c is LengthConstraint { Min: not null, Max: null } l && l.Target == target,
-                c => c is LengthConstraint { Min: null, Max: not null } l && l.Target == target,
-                (lower, upper) =>
-                {
-                    var low = (LengthConstraint)lower;
-                    var high = (LengthConstraint)upper;
-
-                    return low with { Source = $"{low.Source} && {high.Source}", Max = high.Max };
-                });
-        }
+        MergeDisallowed(constraints);
+        MergeNumericBounds(constraints);
+        MergeLengthBounds(constraints);
 
         return constraints;
     }
 
-    private static void MergeDisallowed(List<VariableConstraint> constraints, ConstraintTarget target)
+    private static void MergeDisallowed(List<VariableConstraint> constraints)
     {
-        var matches = constraints
+        var groups = constraints
             .OfType<DisallowedValuesConstraint>()
-            .Where(c => c.Target == target)
+            .GroupBy(c => (c.Target, c.FieldName))
+            .Where(g => g.Count() >= 2)
             .ToList();
 
-        if (matches.Count < 2)
+        foreach (var group in groups)
         {
-            return;
-        }
+            var matches = group.ToList();
+            var merged = matches[0] with
+            {
+                Source = string.Join(" && ", matches.Select(c => c.Source)),
+                Values = [.. matches.SelectMany(c => c.Values)],
+            };
 
-        var merged = matches[0] with
-        {
-            Source = string.Join(" && ", matches.Select(c => c.Source)),
-            Values = [.. matches.SelectMany(c => c.Values)],
-        };
+            constraints[constraints.IndexOf(matches[0])] = merged;
 
-        constraints[constraints.IndexOf(matches[0])] = merged;
-
-        foreach (var duplicate in matches.Skip(1))
-        {
-            constraints.Remove(duplicate);
+            foreach (var duplicate in matches.Skip(1))
+            {
+                constraints.Remove(duplicate);
+            }
         }
     }
 
-    private static void MergeBounds(
-        List<VariableConstraint> constraints,
-        Func<VariableConstraint, bool> isLower,
-        Func<VariableConstraint, bool> isUpper,
-        Func<VariableConstraint, VariableConstraint, VariableConstraint> combine)
+    private static void MergeNumericBounds(List<VariableConstraint> constraints)
     {
-        var lower = constraints.FirstOrDefault(isLower);
-        var upper = constraints.FirstOrDefault(isUpper);
-
-        if (lower is null || upper is null)
+        for (var i = 0; i < constraints.Count; i++)
         {
-            return;
-        }
+            if (constraints[i] is not NumericRangeConstraint { Min: not null, Max: null } low)
+            {
+                continue;
+            }
 
-        constraints[constraints.IndexOf(lower)] = combine(lower, upper);
-        constraints.Remove(upper);
+            var upperIndex = constraints.FindIndex(
+                c => c is NumericRangeConstraint { Min: null, Max: not null } high
+                    && high.Target == low.Target
+                    && string.Equals(high.FieldName, low.FieldName, StringComparison.Ordinal));
+
+            if (upperIndex < 0)
+            {
+                continue;
+            }
+
+            var upper = (NumericRangeConstraint)constraints[upperIndex];
+            constraints[i] = low with
+            {
+                Source = $"{low.Source} && {upper.Source}",
+                Max = upper.Max,
+                MaxInclusive = upper.MaxInclusive,
+            };
+            constraints.RemoveAt(upperIndex);
+
+            if (upperIndex < i)
+            {
+                i--;
+            }
+        }
     }
 
-    /// <summary>Identifies which expression a constraint talks about: the variable itself or a loop element.</summary>
-    private readonly record struct Subject(Func<HclExpression, bool> Matches, ConstraintTarget Target);
+    private static void MergeLengthBounds(List<VariableConstraint> constraints)
+    {
+        for (var i = 0; i < constraints.Count; i++)
+        {
+            if (constraints[i] is not LengthConstraint { Min: not null, Max: null } low)
+            {
+                continue;
+            }
+
+            var upperIndex = constraints.FindIndex(
+                c => c is LengthConstraint { Min: null, Max: not null } high
+                    && high.Target == low.Target
+                    && string.Equals(high.FieldName, low.FieldName, StringComparison.Ordinal));
+
+            if (upperIndex < 0)
+            {
+                continue;
+            }
+
+            var upper = (LengthConstraint)constraints[upperIndex];
+            constraints[i] = low with
+            {
+                Source = $"{low.Source} && {upper.Source}",
+                Max = upper.Max,
+            };
+            constraints.RemoveAt(upperIndex);
+
+            if (upperIndex < i)
+            {
+                i--;
+            }
+        }
+    }
+
+    /// <summary>Identifies which expression a constraint talks about: the variable, an object attribute, or a loop element.</summary>
+    private readonly record struct SubjectMatch(ConstraintTarget Target, string? FieldName, bool HasWrapper);
 }

@@ -729,6 +729,144 @@ public class ModuleValidatorTests
         Assert.Equal("x must be one of a, b.", Assert.Single(report.Failures).ErrorMessage);
     }
 
+    private const string ObjectValidationModuleHcl = """
+        variable "mode" {
+          type    = string
+          default = "standard"
+        }
+
+        variable "endpoint" {
+          type = object({
+            kind     = string
+            target   = optional(string, "")
+            provider = optional(string)
+            timeout  = optional(number, 1)
+          })
+          default = null
+
+          validation {
+            condition     = var.mode != "custom" || var.endpoint != null
+            error_message = "endpoint is required when mode is custom."
+          }
+
+          validation {
+            condition     = var.endpoint == null ? true : contains(["HTTP", "GRPC", "TCP"], upper(var.endpoint.kind))
+            error_message = "endpoint.kind must be HTTP, GRPC, or TCP."
+          }
+
+          validation {
+            condition = var.endpoint == null ? true : (
+              upper(var.endpoint.kind) == "TCP"
+              ? length(trimspace(var.endpoint.provider)) > 0
+              : length(trimspace(var.endpoint.target)) > 0
+            )
+            error_message = "endpoint must specify provider for TCP or target otherwise."
+          }
+
+          validation {
+            condition = var.endpoint == null ? true : (
+              var.endpoint.timeout == 1 ||
+              (var.endpoint.timeout >= 10 && var.endpoint.timeout <= 300)
+            )
+            error_message = "endpoint.timeout must be 1 or between 10 and 300."
+          }
+        }
+
+        variable "items" {
+          type = list(object({
+            name     = string
+            kind     = string
+            provider = optional(string)
+          }))
+          default = []
+
+          validation {
+            condition     = alltrue([for r in var.items : contains(["HTTP", "GRPC", "TCP"], upper(r.kind))])
+            error_message = "items[*].kind must be HTTP, GRPC, or TCP."
+          }
+
+          validation {
+            condition = alltrue([
+              for r in var.items : (
+                r.provider != null
+                ? (lower(r.provider) == "alpha" || lower(r.provider) == "beta")
+                : true
+              )
+            ])
+            error_message = "items[*].provider must be alpha or beta."
+          }
+        }
+        """;
+
+    [Fact]
+    public void ObjectAndListOfObjectsValidationsEvaluate()
+    {
+        var module = Parse(ObjectValidationModuleHcl);
+
+        var defaultsReport = Validate(module);
+        Assert.False(defaultsReport.HasFailures);
+        Assert.False(defaultsReport.HasIndeterminate);
+        Assert.False(defaultsReport.IsRequiredNow("endpoint"));
+
+        var customModeWithoutEndpoint = Validate(module, ("mode", "\"custom\""));
+        Assert.True(customModeWithoutEndpoint.IsRequiredNow("endpoint"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(customModeWithoutEndpoint, "endpoint", 0));
+        Assert.Equal(
+            "endpoint is required when mode is custom.",
+            customModeWithoutEndpoint.For("endpoint")[0].ErrorMessage);
+
+        var validHttpEndpoint = Validate(
+            module,
+            ("mode", "\"custom\""),
+            ("endpoint", "{ kind = \"http\", target = \"10.0.0.1\" }"));
+        Assert.False(validHttpEndpoint.HasFailures);
+
+        var invalidKind = Validate(
+            module,
+            ("endpoint", "{ kind = \"UDP\", target = \"10.0.0.1\" }"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(invalidKind, "endpoint", 1));
+
+        var missingTarget = Validate(
+            module,
+            ("endpoint", "{ kind = \"HTTP\", target = \"   \" }"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(missingTarget, "endpoint", 2));
+
+        var validTcpEndpoint = Validate(
+            module,
+            ("endpoint", "{ kind = \"tcp\", provider = \"alpha\", timeout = 60 }"));
+        Assert.False(validTcpEndpoint.HasFailures);
+
+        var emptyProviderEndpoint = Validate(
+            module,
+            ("endpoint", "{ kind = \"TCP\", provider = \"   \" }"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(emptyProviderEndpoint, "endpoint", 2));
+
+        var nullProviderEndpoint = Validate(
+            module,
+            ("endpoint", "{ kind = \"TCP\" }"));
+        Assert.Equal(ValidationOutcome.Indeterminate, Outcome(nullProviderEndpoint, "endpoint", 2));
+
+        var invalidTimeoutEndpoint = Validate(
+            module,
+            ("endpoint", "{ kind = \"HTTP\", target = \"10.0.0.1\", timeout = 5 }"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(invalidTimeoutEndpoint, "endpoint", 3));
+
+        var validItems = Validate(
+            module,
+            ("items", "[{ name = \"web\", kind = \"http\" }, { name = \"stream\", kind = \"TCP\", provider = \"Alpha\" }]"));
+        Assert.False(validItems.HasFailures);
+
+        var invalidItemKind = Validate(
+            module,
+            ("items", "[{ name = \"web\", kind = \"UDP\" }]"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(invalidItemKind, "items", 0));
+
+        var invalidItemProvider = Validate(
+            module,
+            ("items", "[{ name = \"stream\", kind = \"TCP\", provider = \"gamma\" }]"));
+        Assert.Equal(ValidationOutcome.Failed, Outcome(invalidItemProvider, "items", 1));
+    }
+
     [Fact]
     public async Task ValidatorCanBeUsedConcurrently()
     {
