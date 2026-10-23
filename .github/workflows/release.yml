@@ -8,13 +8,15 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10
 
       - name: Build projects
         shell: bash
