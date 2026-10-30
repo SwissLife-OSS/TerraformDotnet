@@ -53,6 +53,10 @@ public static class HclFileParser
         private string GetRawValue() =>
             _reader.ValueSpan.Length > 0 ? Encoding.UTF8.GetString(_reader.ValueSpan) : string.Empty;
 
+        
+        private bool IsKeyword(string keyword) =>
+            (_current is HclTokenType.Identifier or HclTokenType.FunctionCall) && GetRawValue() == keyword;
+
         private string? GetStringValue() => _reader.GetString();
 
         private void SkipComments()
@@ -862,7 +866,7 @@ public static class HclFileParser
                 Advance();
             }
 
-            if (_current != HclTokenType.Identifier || GetRawValue() != "in")
+            if (!IsKeyword("in"))
             {
                 throw new HclSyntaxException(
                     "Expected 'in' keyword in for expression.",
@@ -903,7 +907,7 @@ public static class HclFileParser
                 }
             }
 
-            if (_current == HclTokenType.Identifier && GetRawValue() == "if")
+            if (IsKeyword("if"))
             {
                 Advance(); // consume 'if'
                 condition = ParseExpression(0);

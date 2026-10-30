@@ -153,6 +153,12 @@ public sealed class HclRoundTripTests
     }
 
     [Fact]
+    public void ForExpressionWithParenthesizedCondition()
+    {
+        AssertRoundTrip("ids = { for v in list : v.key => v.id if(v.enabled == true) }\n");
+    }
+
+    [Fact]
     public void SplatExpression()
     {
         AssertRoundTrip("ids = instances[*].id\n");
