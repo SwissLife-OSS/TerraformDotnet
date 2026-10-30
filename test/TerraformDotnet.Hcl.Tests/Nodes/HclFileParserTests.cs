@@ -709,6 +709,52 @@ public sealed class HclFileParserTests
         Assert.Equal(HclBinaryOperator.NotEqual, cond.Operator);
     }
 
+    [Theory]
+    [InlineData("x = [for v in list : v if (v != \"\")]\n")]
+    [InlineData("x = [for v in list : v if(v != \"\")]\n")]
+    [InlineData("x = {for v in list : v.key => v if (v != \"\")}\n")]
+    [InlineData("x = {for v in list : v.key => v if(v != \"\")}\n")]
+    public void ParseForWithParenthesizedCondition(string hcl)
+    {
+        var file = Parse(hcl);
+        var forExpr = Assert.IsType<HclForExpression>(Assert.Single(file.Body.Attributes).Value);
+
+        var cond = Assert.IsType<HclBinaryExpression>(forExpr.Condition);
+        Assert.Equal(HclBinaryOperator.NotEqual, cond.Operator);
+    }
+
+    [Fact]
+    public void ParseForWithParenthesizedConditionFollowedByOperator()
+    {
+        var file = Parse("x = [for v in list : v if (v != \"\") && enabled]\n");
+        var forExpr = Assert.IsType<HclForExpression>(Assert.Single(file.Body.Attributes).Value);
+
+        var cond = Assert.IsType<HclBinaryExpression>(forExpr.Condition);
+        Assert.Equal(HclBinaryOperator.And, cond.Operator);
+    }
+
+    [Theory]
+    [InlineData("x = [for v in (list) : v]\n")]
+    [InlineData("x = [for v in(list) : v]\n")]
+    public void ParseForWithParenthesizedCollection(string hcl)
+    {
+        var file = Parse(hcl);
+        var forExpr = Assert.IsType<HclForExpression>(Assert.Single(file.Body.Attributes).Value);
+
+        var collection = Assert.IsType<HclVariableExpression>(forExpr.Collection);
+        Assert.Equal("list", collection.Name);
+    }
+
+    [Fact]
+    public void ParseForStillAcceptsFunctionCallAsCondition()
+    {
+        var file = Parse("x = [for v in list : v if contains(allowed, v)]\n");
+        var forExpr = Assert.IsType<HclForExpression>(Assert.Single(file.Body.Attributes).Value);
+
+        var call = Assert.IsType<HclFunctionCallExpression>(forExpr.Condition);
+        Assert.Equal("contains", call.Name);
+    }
+
     [Fact]
     public void ParseObjectFor()
     {
