@@ -118,7 +118,9 @@ All nodes inherit from `HclNode`, which provides:
 | `HclComment` | `Text`, `Style`, `Start`, `End` |
 | `HclCommentStyle` | `Line` (`//`), `Hash` (`#`), `Block` (`/* */`) |
 
-Comments attach to the nearest subsequent node as `LeadingComments`. Inline comments (same line as a node) are stored as `TrailingComment`. Comments between blocks or at file end that don't attach to any node go into `HclFile.DanglingComments`.
+Comments attach to the nearest subsequent node as `LeadingComments`. A comment on the same line after a node — after an attribute value, a block's closing `}`, a tuple element, a call argument or an object element — is stored as its `TrailingComment`. Comments that no node follows go to the enclosing container: `HclFile.DanglingComments` at file end, `HclBody.DanglingComments` before a block's `}`, and `DanglingComments` on `HclTupleExpression`, `HclObjectExpression` and `HclFunctionCallExpression` before their closing bracket. Object elements (`HclObjectElement`) carry their own `LeadingComments` and `TrailingComment`.
+
+Known limits: a comment on an opening line (`{ # note`) becomes a leading comment of the first element; comments inside operators, conditionals, `for` expressions, index brackets and templates move to the next attribute; blank lines around comments are not kept.
 
 ### Writer (`TerraformDotnet.Hcl.Writer`)
 
@@ -127,10 +129,20 @@ Comments attach to the nearest subsequent node as `LeadingComments`. Inline comm
 | `Utf8HclWriter` | `sealed class : IDisposable`. Writes to `IBufferWriter<byte>` or `Stream`. |
 | `HclWriterOptions` | `NewLineStyle` (default LF), `PreserveComments` (default true). |
 | `HclFileEmitter` | Walks `HclFile` AST and writes via `Utf8HclWriter`. |
+| `HclFormatter` | Applies the `terraform fmt` layout rules (indentation, `=` and comment alignment) to HCL text. |
+
+`HclFileEmitter` writes a draft that only decides where lines break, then runs it through `HclFormatter`, which owns indentation and alignment. If the draft is not valid HCL (an AST built in code with, say, an attribute name containing a space), the draft is written unformatted instead of throwing.
 
 **Canonical formatting rules** (matching `terraform fmt`):
 - 2-space indentation per nesting level
-- `=` signs aligned within the same block body (longest attribute name sets the column)
+- `=` signs aligned across runs of adjacent single-line attributes (a multi-line value, blank line, comment or block ends the run)
+- Tuples and function calls with a multi-line item put every item on its own line; objects pad keys the same run-based way
+- Object-style `for` is written as `{ for ... }`; `:` object keys are not aligned
+- A function call with exactly one multi-line argument keeps its brackets on the argument's lines (`merge(var.a, {` … `})`); more than one, a heredoc argument or a comment puts every argument on its own line
+- A tuple, call or object that holds a comment is written on several lines
+- Parentheses are written where the tree needs them (`(a + b) * c`, `(a ? b : c).id`) and nowhere else
+- Like `terraform fmt`, no space after `in`/`if` before a `(` (`in(a ? b : c) + d`), and a space after a leading `-` that follows `in`, `if` or `=>` (`k => - v`)
+- String literals keep `${...}` and `%{...}` as written: only the string text outside them, and strings nested inside them, are escaped
 - Single blank line between top-level blocks
 - Opening `{` on the same line as block/object header
 - Closing `}` on its own line at the parent's indent level

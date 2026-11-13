@@ -15,6 +15,9 @@ public sealed class HclBody : HclNode
     /// <summary>Gets the blocks defined in this body.</summary>
     public List<HclBlock> Blocks { get; } = [];
 
+    /// <summary>Gets the comments on their own lines before the closing <c>}</c> of a block body.</summary>
+    public List<HclComment> DanglingComments { get; } = [];
+
     /// <inheritdoc />
     public override void Accept(IHclVisitor visitor) => visitor.VisitBody(this);
 
@@ -38,6 +41,8 @@ public sealed class HclBody : HclNode
         {
             clone.Blocks.Add((HclBlock)block.DeepClone());
         }
+
+        clone.DanglingComments.AddRange(DanglingComments);
 
         return clone;
     }

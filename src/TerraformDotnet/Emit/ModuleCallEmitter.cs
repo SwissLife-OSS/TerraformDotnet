@@ -1,4 +1,5 @@
 using System.Text;
+using TerraformDotnet.Hcl.Exceptions;
 using TerraformDotnet.Hcl.Nodes;
 using TerraformDotnet.Hcl.Writer;
 using TerraformDotnet.Module;
@@ -31,8 +32,8 @@ public sealed class ModuleCallEmitter
     }
 
     /// <summary>
-    /// Emits the <c>module "name" { ... }</c> block as an HCL string.
-    /// Arguments are aligned with padding matching <c>terraform fmt</c> conventions.
+    /// Emits the <c>module "name" { ... }</c> block as an HCL string, formatted like
+    /// <c>terraform fmt</c>.
     /// </summary>
     public string EmitModuleBlock()
     {
@@ -40,39 +41,25 @@ public sealed class ModuleCallEmitter
 
         sb.AppendLine($"module \"{_call.Name}\" {{");
 
-        // Group 1: source + version
-        var sourceGroup = new List<string> { "source" };
+        AppendAttribute(sb, "source", $"\"{_call.Source}\"");
 
         if (_call.Version is not null)
         {
-            sourceGroup.Add("version");
+            AppendAttribute(sb, "version", $"\"{_call.Version}\"");
         }
 
-        var sourcePadding = Utf8HclWriter.AlignAttributes(sourceGroup);
-
-        // Source (always first)
-        EmitAttribute(sb, "source", $"\"{_call.Source}\"", sourcePadding);
-
-        // Version (if set, right after source)
-        if (_call.Version is not null)
-        {
-            EmitAttribute(sb, "version", $"\"{_call.Version}\"", sourcePadding);
-        }
-
-        // Group 2: arguments
         if (_call.Arguments.Count > 0)
         {
             sb.AppendLine();
 
-            var argPadding = Utf8HclWriter.AlignAttributes(_call.Arguments.Keys.ToList());
-
             foreach (var arg in _call.Arguments)
             {
-                EmitAttribute(sb, arg.Key, arg.Value, argPadding);
+                AppendAttribute(sb, arg.Key, arg.Value);
             }
         }
 
-        // Commented optional variables
+        // Commented optional variables. terraform fmt does not align text inside comments, so
+        // the names are padded here.
         if (_call.CommentedOptionalVariables.Count > 0)
         {
             sb.AppendLine();
@@ -96,65 +83,47 @@ public sealed class ModuleCallEmitter
             }
         }
 
-        // Group 3: meta-arguments
-        var metaNames = new List<string>();
+        // Meta-arguments
+        var metaArguments = new List<KeyValuePair<string, string>>();
 
         if (_call.Count is not null)
         {
-            metaNames.Add("count");
+            metaArguments.Add(new("count", _call.Count));
         }
 
         if (_call.ForEach is not null)
         {
-            metaNames.Add("for_each");
+            metaArguments.Add(new("for_each", _call.ForEach));
         }
 
         if (_call.DependsOn is not null)
         {
-            metaNames.Add("depends_on");
+            var deps = string.Join(", ", _call.DependsOn);
+            metaArguments.Add(new("depends_on", $"[{deps}]"));
         }
 
         if (_call.Providers is not null)
         {
-            metaNames.Add("providers");
+            var pairs = _call.Providers.Select(p => $"{p.Key} = {p.Value}");
+            metaArguments.Add(new("providers", $"{{ {string.Join(", ", pairs)} }}"));
         }
 
-        if (metaNames.Count > 0)
+        if (metaArguments.Count > 0)
         {
             if (_call.Arguments.Count > 0 || _call.CommentedOptionalVariables.Count > 0)
             {
                 sb.AppendLine();
             }
 
-            var metaPadding = Utf8HclWriter.AlignAttributes(metaNames);
-
-            if (_call.Count is not null)
+            foreach (var meta in metaArguments)
             {
-                EmitAttribute(sb, "count", _call.Count, metaPadding);
-            }
-
-            if (_call.ForEach is not null)
-            {
-                EmitAttribute(sb, "for_each", _call.ForEach, metaPadding);
-            }
-
-            if (_call.DependsOn is not null)
-            {
-                var deps = string.Join(", ", _call.DependsOn);
-                EmitAttribute(sb, "depends_on", $"[{deps}]", metaPadding);
-            }
-
-            if (_call.Providers is not null)
-            {
-                var pairs = _call.Providers.Select(p => $"{p.Key} = {p.Value}");
-                var providersBlock = $"{{ {string.Join(", ", pairs)} }}";
-                EmitAttribute(sb, "providers", providersBlock, metaPadding);
+                AppendAttribute(sb, meta.Key, meta.Value);
             }
         }
 
         sb.Append('}');
 
-        return sb.ToString();
+        return FormatHcl(sb.ToString());
     }
 
     /// <summary>
@@ -202,24 +171,23 @@ public sealed class ModuleCallEmitter
 
             if (options.IncludeType && sourceVar?.Type is not null)
             {
-                sb.AppendLine($"  type = {sourceVar.Type.ToHcl()}");
+                AppendAttribute(sb, "type", sourceVar.Type.ToHcl());
             }
 
             if (options.IncludeDescription && sourceVar?.Description is not null)
             {
-                sb.AppendLine($"  description = \"{sourceVar.Description}\"");
+                AppendAttribute(sb, "description", $"\"{sourceVar.Description}\"");
             }
 
             if (options.IncludeDefault && sourceVar?.Default is not null)
             {
-                var defaultHcl = EmitExpression(sourceVar.Default);
-                sb.AppendLine($"  default = {defaultHcl}");
+                AppendAttribute(sb, "default", EmitExpression(sourceVar.Default));
             }
 
             sb.AppendLine("}");
         }
 
-        return sb.ToString();
+        return FormatHcl(sb.ToString());
     }
 
     /// <summary>
@@ -242,12 +210,6 @@ public sealed class ModuleCallEmitter
     {
         var sb = new StringBuilder();
         var variableLookup = BuildVariableLookup();
-
-        // When compact, all values form one group → align globally.
-        // When not compact, blank lines separate each value into its own group → no padding needed.
-        var padding = compactSpacing
-            ? Utf8HclWriter.AlignAttributes(values.Keys.ToList())
-            : new Dictionary<string, int>();
         var first = true;
 
         foreach (var kvp in values)
@@ -280,19 +242,11 @@ public sealed class ModuleCallEmitter
                 }
             }
 
-            var namePad = padding.TryGetValue(kvp.Key, out var p)
-                ? new string(' ', p)
-                : "";
-
-            var line = $"{kvp.Key}{namePad} = {kvp.Value.Expression}";
-
-            if (kvp.Value.Comment is not null)
-            {
-                line += $" # {kvp.Value.Comment}";
-            }
-
-            sb.AppendLine(line);
+            AppendInputValue(sb, kvp.Key, kvp.Value);
         }
+
+        var formatted = FormatHcl(sb.ToString());
+        sb.Clear().Append(formatted);
 
         // Commented sentinel variables (injected externally, e.g. by a CI/CD pipeline)
         if (_call.CommentedInputVariables.Count > 0)
@@ -354,44 +308,60 @@ public sealed class ModuleCallEmitter
         }
     }
 
-    private static void EmitAttribute(
-        StringBuilder sb,
-        string name,
-        string value,
-        Dictionary<string, int> padding)
+    private static void AppendAttribute(StringBuilder sb, string name, string value)
     {
-        var namePad = padding.TryGetValue(name, out var p)
-            ? new string(' ', p)
-            : "";
+        sb.Append("  ").Append(name).Append(" = ").AppendLine(value);
+    }
 
-        if (!value.Contains('\n'))
+    private static void AppendInputValue(StringBuilder sb, string name, InputValue input)
+    {
+        sb.Append(name).Append(" = ").Append(input.Expression);
+
+        if (input.Comment is null)
         {
-            sb.AppendLine($"  {name}{namePad} = {value}");
+            sb.AppendLine();
+        }
+        else if (EndsWithHeredoc(input.Expression))
+        {
+            // A comment after the end marker would become part of the marker line.
+            sb.AppendLine().Append("# ").AppendLine(input.Comment);
+        }
+        else
+        {
+            sb.Append(" # ").AppendLine(input.Comment);
+        }
+    }
 
-            return;
+    /// <summary>Determines whether the last line of a value is the end marker of a heredoc.</summary>
+    private static bool EndsWithHeredoc(string expression)
+    {
+        int lastBreak = expression.LastIndexOf('\n');
+
+        if (lastBreak < 0)
+        {
+            return false;
         }
 
-        // Multi-line value: indent continuation lines to align under the first value character.
-        // The prefix is "  {name}{namePad} = " — continuation lines are shifted by that amount
-        // while preserving their relative indentation.
-        int prefixLength = 2 + name.Length + namePad.Length + 3; // "  " + name + pad + " = "
-        var indent = new string(' ', prefixLength);
-        var lines = value.Split('\n');
+        string marker = expression[(lastBreak + 1)..].Trim();
 
-        sb.Append($"  {name}{namePad} = {lines[0]}");
-        sb.AppendLine();
+        return marker.Length > 0
+            && (expression.Contains($"<<{marker}", StringComparison.Ordinal)
+                || expression.Contains($"<<-{marker}", StringComparison.Ordinal));
+    }
 
-        for (int i = 1; i < lines.Length; i++)
+    /// <summary>
+    /// Formats generated HCL like <c>terraform fmt</c>. Text that is not valid HCL, for example
+    /// because a caller supplied an invalid expression, is returned as built.
+    /// </summary>
+    private static string FormatHcl(string hcl)
+    {
+        try
         {
-            if (string.IsNullOrWhiteSpace(lines[i]))
-            {
-                sb.AppendLine();
-            }
-            else
-            {
-                sb.Append(indent);
-                sb.AppendLine(lines[i]);
-            }
+            return HclFormatter.Format(hcl);
+        }
+        catch (HclException)
+        {
+            return hcl;
         }
     }
 

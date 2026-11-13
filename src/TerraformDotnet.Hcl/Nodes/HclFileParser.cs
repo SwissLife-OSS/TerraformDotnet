@@ -101,6 +101,7 @@ public static class HclFileParser
                 {
                     case HclTokenType.AttributeName:
                         var attr = ParseAttribute();
+                        attr.TrailingComment = TakeTrailingComment(attr.End);
                         if (!seenAttributes.Add(attr.Name))
                         {
                             throw new HclSemanticException(
@@ -122,6 +123,7 @@ public static class HclFileParser
 
                     case HclTokenType.BlockType:
                         var block = ParseBlock();
+                        block.TrailingComment = TakeTrailingComment(block.Body.End);
 
                         if (previousEndLine >= 0)
                         {
@@ -138,6 +140,7 @@ public static class HclFileParser
                     case HclTokenType.BlockEnd:
                         if (!isTopLevel)
                         {
+                            body.DanglingComments.AddRange(DrainPendingComments());
                             body.End = _reader.Position;
                             Advance(); // consume BlockEnd
                             return;
@@ -632,37 +635,19 @@ public static class HclFileParser
 
             var funcCall = new HclFunctionCallExpression { Name = name, Start = start };
 
-            if (_current == HclTokenType.CloseParen)
+            while (_current != HclTokenType.CloseParen)
             {
-                funcCall.End = _reader.Position;
-                Advance(); // consume )
-                return funcCall;
-            }
+                HclExpression argument = ParseListItem(start, out bool hasComma, out bool expand);
+                funcCall.Arguments.Add(argument);
 
-            // First argument
-            funcCall.Arguments.Add(ParseExpression(0));
-
-            if (_current == HclTokenType.Ellipsis)
-            {
-                funcCall.ExpandFinalArgument = true;
-                Advance();
-            }
-
-            while (_current == HclTokenType.Comma)
-            {
-                Advance(); // consume ,
-                SkipComments();
-                if (_current == HclTokenType.CloseParen)
-                {
-                    break; // trailing comma
-                }
-
-                funcCall.Arguments.Add(ParseExpression(0));
-
-                if (_current == HclTokenType.Ellipsis)
+                if (expand)
                 {
                     funcCall.ExpandFinalArgument = true;
-                    Advance();
+                }
+
+                if (!hasComma)
+                {
+                    break;
                 }
             }
 
@@ -673,6 +658,7 @@ public static class HclFileParser
                     _reader.TokenStart);
             }
 
+            funcCall.DanglingComments.AddRange(DrainPendingCommentsAfter(start));
             funcCall.End = _reader.Position;
             Advance(); // consume )
             return funcCall;
@@ -704,31 +690,21 @@ public static class HclFileParser
             Advance(); // consume [
             SkipComments();
 
-            if (_current == HclTokenType.CloseBracket)
-            {
-                Mark end = _reader.Position;
-                Advance();
-                return new HclTupleExpression { Start = start, End = end };
-            }
-
             if (_current == HclTokenType.Identifier && GetRawValue() == "for")
             {
                 return ParseForExpression(start, isObject: false);
             }
 
             var tuple = new HclTupleExpression { Start = start };
-            tuple.Elements.Add(ParseExpression(0));
 
-            while (_current == HclTokenType.Comma)
+            while (_current != HclTokenType.CloseBracket)
             {
-                Advance(); // consume ,
-                SkipComments();
-                if (_current == HclTokenType.CloseBracket)
-                {
-                    break; // trailing comma
-                }
+                tuple.Elements.Add(ParseListItem(start, out bool hasComma, out _));
 
-                tuple.Elements.Add(ParseExpression(0));
+                if (!hasComma)
+                {
+                    break;
+                }
             }
 
             if (_current != HclTokenType.CloseBracket)
@@ -736,6 +712,7 @@ public static class HclFileParser
                 throw new HclSyntaxException("Expected ']'.", _reader.TokenStart);
             }
 
+            tuple.DanglingComments.AddRange(DrainPendingCommentsAfter(start));
             tuple.End = _reader.Position;
             Advance();
             return tuple;
@@ -749,43 +726,37 @@ public static class HclFileParser
             Advance(); // consume {
             SkipComments();
 
-            if (_current == HclTokenType.CloseBrace)
-            {
-                Mark end = _reader.Position;
-                Advance();
-                return new HclObjectExpression { Start = start, End = end };
-            }
-
             if (_current == HclTokenType.Identifier && GetRawValue() == "for")
             {
                 return ParseForExpression(start, isObject: true);
             }
 
             var obj = new HclObjectExpression { Start = start };
-            obj.Elements.Add(ParseObjectElement());
 
             // Objects support both comma and newline separation.
             // The reader skips newlines inside braces, so consecutive
             // elements appear without an explicit separator token.
-            while (true)
+            while (_current != HclTokenType.CloseBrace && _current != HclTokenType.Eof)
             {
-                SkipComments();
-                if (_current == HclTokenType.CloseBrace || _current == HclTokenType.Eof)
+                List<HclComment> leading = DrainPendingCommentsAfter(start);
+                HclObjectElement element = ParseObjectElement();
+                element.LeadingComments.AddRange(leading);
+
+                bool hasComma = _current == HclTokenType.Comma;
+                if (hasComma)
                 {
-                    break;
+                    Advance();
                 }
 
-                if (_current == HclTokenType.Comma)
+                element.TrailingComment = TakeTrailingComment(element.Value.End);
+
+                if (!hasComma && _current == HclTokenType.Comma)
                 {
                     Advance();
                     SkipComments();
-                    if (_current == HclTokenType.CloseBrace)
-                    {
-                        break; // trailing comma
-                    }
                 }
 
-                obj.Elements.Add(ParseObjectElement());
+                obj.Elements.Add(element);
             }
 
             if (_current != HclTokenType.CloseBrace)
@@ -793,6 +764,7 @@ public static class HclFileParser
                 throw new HclSyntaxException("Expected '}'.", _reader.TokenStart);
             }
 
+            obj.DanglingComments.AddRange(DrainPendingCommentsAfter(start));
             obj.End = _reader.Position;
             Advance();
             return obj;
@@ -992,6 +964,78 @@ public static class HclFileParser
                 Start = _reader.TokenStart,
                 End = _reader.Position,
             };
+        }
+
+        /// <summary>
+        /// Parses one element of a tuple or argument of a call with its comments and the comma
+        /// after it. On return <c>_current</c> is the token after the comma and any comments.
+        /// </summary>
+        private HclExpression ParseListItem(Mark containerStart, out bool hasComma, out bool expand)
+        {
+            List<HclComment> leading = DrainPendingCommentsAfter(containerStart);
+            HclExpression item = ParseExpression(0);
+            item.LeadingComments.AddRange(leading);
+
+            expand = _current == HclTokenType.Ellipsis;
+            if (expand)
+            {
+                Advance();
+            }
+
+            hasComma = _current == HclTokenType.Comma;
+            if (hasComma)
+            {
+                Advance();
+            }
+
+            item.TrailingComment = TakeTrailingComment(item.End);
+
+            if (!hasComma && _current == HclTokenType.Comma)
+            {
+                hasComma = true;
+                Advance();
+                SkipComments();
+            }
+
+            return item;
+        }
+
+        /// <summary>
+        /// Takes the first comment that starts on the line where a node ends, after its end.
+        /// Comments on later lines stay pending for the next node or the closing delimiter.
+        /// </summary>
+        private HclComment? TakeTrailingComment(Mark end)
+        {
+            SkipComments();
+
+            for (int i = 0; i < _pendingComments.Count; i++)
+            {
+                HclComment comment = _pendingComments[i];
+                if (comment.Start.Line == end.Line && comment.Start.Offset >= end.Offset)
+                {
+                    _pendingComments.RemoveAt(i);
+                    return comment;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Drains the pending comments that come after <paramref name="containerStart"/>. Earlier
+        /// ones were read before the container opened and stay pending for the enclosing node.
+        /// </summary>
+        private List<HclComment> DrainPendingCommentsAfter(Mark containerStart)
+        {
+            int first = _pendingComments.FindIndex(c => c.Start.Offset > containerStart.Offset);
+            if (first < 0)
+            {
+                return [];
+            }
+
+            List<HclComment> result = _pendingComments.GetRange(first, _pendingComments.Count - first);
+            _pendingComments.RemoveRange(first, _pendingComments.Count - first);
+            return result;
         }
 
         private List<HclComment> DrainPendingComments()

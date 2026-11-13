@@ -1,1 +1,11 @@
 #nullable enable
+TerraformDotnet.Hcl.Writer.HclFormatter
+static TerraformDotnet.Hcl.Writer.HclFormatter.Format(string! hcl) -> string!
+static TerraformDotnet.Hcl.Writer.HclFormatter.Format(System.ReadOnlySpan<byte> utf8Hcl) -> byte[]!
+TerraformDotnet.Hcl.Nodes.HclBody.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclObjectElement.LeadingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclObjectElement.TrailingComment.get -> TerraformDotnet.Hcl.Nodes.HclComment?
+TerraformDotnet.Hcl.Nodes.HclObjectElement.TrailingComment.set -> void
+TerraformDotnet.Hcl.Nodes.HclObjectExpression.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclTupleExpression.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!

@@ -8,6 +8,9 @@ public sealed class HclTupleExpression : HclExpression
     /// <summary>Gets the tuple elements.</summary>
     public List<HclExpression> Elements { get; } = [];
 
+    /// <summary>Gets the comments on their own lines before the closing <c>]</c>.</summary>
+    public List<HclComment> DanglingComments { get; } = [];
+
     /// <inheritdoc />
     public override void Accept(IHclVisitor visitor) => visitor.VisitTuple(this);
 
@@ -18,8 +21,12 @@ public sealed class HclTupleExpression : HclExpression
 
         foreach (var element in Elements)
         {
-            clone.Elements.Add((HclExpression)element.DeepClone());
+            var elementClone = (HclExpression)element.DeepClone();
+            element.CopyCommentsTo(elementClone);
+            clone.Elements.Add(elementClone);
         }
+
+        clone.DanglingComments.AddRange(DanglingComments);
 
         return clone;
     }

@@ -41,6 +41,27 @@ public sealed class Utf8HclWriterAttributeTests
         Assert.Equal("value = \"line1\\nline2\\ttab\\\"quote\\\\back\"\n", result);
     }
 
+    public static TheoryData<string, string> TemplateStrings => new()
+    {
+        { "All: ${join(\", \", var.cidrs)}", "\"All: ${join(\", \", var.cidrs)}\"" },
+        { "x ${replace(var.s, \"\n\", \" \")} \"q\"", "\"x ${replace(var.s, \"\\n\", \" \")} \\\"q\\\"\"" },
+        { "${ {a = 1}.a } \"", "\"${ {a = 1}.a } \\\"\"" },
+        { "%{ if var.on }\"on\"%{ endif }", "\"%{ if var.on }\\\"on\\\"%{ endif }\"" },
+        { "${f(\"${var.a}-x\")} \"q\"", "\"${f(\"${var.a}-x\")} \\\"q\\\"\"" },
+        { "$${not} %%{not} \"q\"", "\"$${not} %%{not} \\\"q\\\"\"" },
+        { "cost $ and 100% \"q\"", "\"cost $ and 100% \\\"q\\\"\"" },
+        { "smile \U0001F600 ok", "\"smile \U0001F600 ok\"" },
+    };
+
+    [Theory]
+    [MemberData(nameof(TemplateStrings))]
+    public void WriteStringValue_TemplateSequences_EscapesOnlyStringText(string value, string expected)
+    {
+        string result = Write(w => w.WriteStringValue(value));
+
+        Assert.Equal(expected, result);
+    }
+
     [Fact]
     public void WriteIntAttribute()
     {

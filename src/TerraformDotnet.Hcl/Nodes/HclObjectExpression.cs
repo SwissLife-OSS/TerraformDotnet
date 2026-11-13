@@ -8,6 +8,9 @@ public sealed class HclObjectExpression : HclExpression
     /// <summary>Gets the key-value pairs.</summary>
     public List<HclObjectElement> Elements { get; } = [];
 
+    /// <summary>Gets the comments on their own lines before the closing <c>}</c>.</summary>
+    public List<HclComment> DanglingComments { get; } = [];
+
     /// <inheritdoc />
     public override void Accept(IHclVisitor visitor) => visitor.VisitObject(this);
 
@@ -18,14 +21,19 @@ public sealed class HclObjectExpression : HclExpression
 
         foreach (var element in Elements)
         {
-            clone.Elements.Add(new HclObjectElement
+            var elementClone = new HclObjectElement
             {
                 Key = (HclExpression)element.Key.DeepClone(),
                 Value = (HclExpression)element.Value.DeepClone(),
                 ForceKey = element.ForceKey,
                 UsesColon = element.UsesColon,
-            });
+                TrailingComment = element.TrailingComment,
+            };
+            elementClone.LeadingComments.AddRange(element.LeadingComments);
+            clone.Elements.Add(elementClone);
         }
+
+        clone.DanglingComments.AddRange(DanglingComments);
 
         return clone;
     }
@@ -49,4 +57,10 @@ public sealed class HclObjectElement
 
     /// <summary>Gets or sets whether the separator is <c>:</c> instead of <c>=</c>.</summary>
     public bool UsesColon { get; set; }
+
+    /// <summary>Gets the comments on their own lines before this element.</summary>
+    public List<HclComment> LeadingComments { get; } = [];
+
+    /// <summary>Gets or sets the comment on the line where this element ends.</summary>
+    public HclComment? TrailingComment { get; set; }
 }

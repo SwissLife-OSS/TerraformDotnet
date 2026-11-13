@@ -1,3 +1,5 @@
+using System.Buffers;
+using TerraformDotnet.Hcl.Exceptions;
 using TerraformDotnet.Hcl.Writer;
 
 namespace TerraformDotnet.Hcl.Nodes;
@@ -7,10 +9,16 @@ namespace TerraformDotnet.Hcl.Nodes;
 /// via a <see cref="Utf8HclWriter"/>. Produces output identical to
 /// <c>terraform fmt</c>.
 /// </summary>
+/// <remarks>
+/// The emitter decides where lines break; <see cref="HclFormatter"/> then applies the
+/// indentation and alignment of <c>terraform fmt</c>.
+/// </remarks>
 public sealed class HclFileEmitter
 {
-    private readonly Utf8HclWriter _writer;
+    private readonly Utf8HclWriter _target;
     private readonly bool _preserveComments;
+    private Utf8HclWriter _writer;
+    private HclExpression? _spacedNegation;
 
     /// <summary>
     /// Initializes a new emitter that writes to the given writer.
@@ -19,7 +27,8 @@ public sealed class HclFileEmitter
     /// <param name="preserveComments">Whether to emit comments.</param>
     public HclFileEmitter(Utf8HclWriter writer, bool preserveComments = true)
     {
-        _writer = writer ?? throw new ArgumentNullException(nameof(writer));
+        _target = writer ?? throw new ArgumentNullException(nameof(writer));
+        _writer = writer;
         _preserveComments = preserveComments;
     }
 
@@ -29,9 +38,44 @@ public sealed class HclFileEmitter
     /// <param name="file">The file to emit.</param>
     public void Emit(HclFile file)
     {
-        EmitComments(file.LeadingComments);
-        EmitBody(file.Body, isTopLevel: true);
-        EmitComments(file.DanglingComments);
+        ArgumentNullException.ThrowIfNull(file);
+
+        var draft = new ArrayBufferWriter<byte>();
+        int baseLevel = _target.CurrentDepth;
+
+        _writer = new Utf8HclWriter(draft, _target.Options);
+        for (int i = 0; i < baseLevel; i++)
+        {
+            _writer.CurrentDepth_Increment();
+        }
+
+        try
+        {
+            EmitComments(file.LeadingComments);
+            EmitBody(file.Body, isTopLevel: true);
+            EmitComments(file.DanglingComments);
+        }
+        finally
+        {
+            _writer = _target;
+        }
+
+        var formatted = new ArrayBufferWriter<byte>(draft.WrittenCount + 64);
+
+        try
+        {
+            HclFormatter.Format(draft.WrittenSpan, baseLevel, formatted);
+        }
+        catch (HclSyntaxException)
+        {
+            // An AST built in code can hold text that is not valid HCL (for example an
+            // attribute name with a space). Write it as emitted rather than failing.
+            _target.WriteRawHcl(draft.WrittenSpan);
+
+            return;
+        }
+
+        _target.WriteRawHcl(formatted.WrittenSpan);
     }
 
     // ── Body & structure ────────────────────────────────────────
@@ -40,14 +84,11 @@ public sealed class HclFileEmitter
     {
         // Build an ordered list of body elements by their Start position
         // so attributes and blocks are emitted in source order.
+        // OrderBy is stable, which keeps programmatically built ASTs (all offsets 0) in insertion order.
         var elements = new List<HclNode>(body.Attributes.Count + body.Blocks.Count);
         elements.AddRange(body.Attributes);
         elements.AddRange(body.Blocks);
-        elements.Sort((a, b) => a.Start.Offset.CompareTo(b.Start.Offset));
-
-        // Pre-compute = alignment per group.
-        // Groups are consecutive attributes not separated by blank lines or blocks.
-        var padding = ComputePerGroupPadding(elements);
+        elements = [.. elements.OrderBy(e => e.Start.Offset)];
 
         bool previousWasBlock = false;
         bool isFirst = true;
@@ -62,7 +103,7 @@ public sealed class HclFileEmitter
                         _writer.WriteNewLine();
                     }
 
-                    EmitAttribute(attr, padding.GetValueOrDefault(attr.Name, 0));
+                    EmitAttribute(attr);
                     previousWasBlock = false;
                     break;
 
@@ -79,60 +120,16 @@ public sealed class HclFileEmitter
 
             isFirst = false;
         }
+
+        EmitComments(body.DanglingComments);
     }
 
-    private static Dictionary<string, int> ComputePerGroupPadding(List<HclNode> elements)
-    {
-        var result = new Dictionary<string, int>();
-        var groupNames = new List<string>();
-
-        for (int i = 0; i < elements.Count; i++)
-        {
-            if (elements[i] is HclAttribute attr)
-            {
-                if (attr.HasLeadingBlankLine && groupNames.Count > 0)
-                {
-                    MergeGroupPadding(groupNames, result);
-                    groupNames.Clear();
-                }
-
-                groupNames.Add(attr.Name);
-            }
-            else
-            {
-                if (groupNames.Count > 0)
-                {
-                    MergeGroupPadding(groupNames, result);
-                    groupNames.Clear();
-                }
-            }
-        }
-
-        if (groupNames.Count > 0)
-        {
-            MergeGroupPadding(groupNames, result);
-        }
-
-        return result;
-    }
-
-    private static void MergeGroupPadding(
-        List<string> names,
-        Dictionary<string, int> target)
-    {
-        var padding = Utf8HclWriter.AlignAttributes(names);
-        foreach (var kvp in padding)
-        {
-            target[kvp.Key] = kvp.Value;
-        }
-    }
-
-    private void EmitAttribute(HclAttribute attr, int namePadding)
+    private void EmitAttribute(HclAttribute attr)
     {
         EmitComments(attr.LeadingComments);
-        _writer.WriteAttributeName(attr.Name, namePadding);
+        _writer.WriteAttributeName(attr.Name);
         EmitExpression(attr.Value);
-        EmitTrailingComment(attr.TrailingComment);
+        EmitTrailingComment(attr.TrailingComment, attr.Value);
         _writer.WriteAttributeEnd();
     }
 
@@ -141,7 +138,18 @@ public sealed class HclFileEmitter
         EmitComments(block.LeadingComments);
         _writer.WriteBlockStart(block.Type, [.. block.Labels]);
         EmitBody(block.Body, isTopLevel: false);
-        _writer.WriteBlockEnd();
+
+        if (!_preserveComments || block.TrailingComment is null)
+        {
+            _writer.WriteBlockEnd();
+            return;
+        }
+
+        _writer.CurrentDepth_Decrement();
+        _writer.WriteIndent();
+        _writer.WriteRawHcl("}"u8);
+        EmitTrailingComment(block.TrailingComment);
+        _writer.WriteNewLine();
     }
 
     // ── Expressions ─────────────────────────────────────────────
@@ -205,6 +213,9 @@ public sealed class HclFileEmitter
             case HclLiteralKind.String:
                 _writer.WriteStringValue(lit.Value ?? "");
                 break;
+            case HclLiteralKind.Number when TakeSpacedNegation(lit):
+                _writer.WriteRawString($"- {lit.Value![1..]}");
+                break;
             case HclLiteralKind.Number:
                 _writer.WriteRawString(lit.Value ?? "0");
                 break;
@@ -217,29 +228,121 @@ public sealed class HclFileEmitter
         }
     }
 
+    // The AST has no node for parentheses, so the emitter adds the ones the parser needs to
+    // rebuild the same tree. Binary operators are left-associative and a conditional only binds
+    // at the top of an expression; redundant parentheses from the source are not kept.
+
     private void EmitBinary(HclBinaryExpression binary)
     {
-        EmitExpression(binary.Left);
+        EmitOperand(binary.Left, ParenthesizesLeft(binary));
         _writer.WriteSpace();
         _writer.WriteRawString(OperatorToString(binary.Operator));
         _writer.WriteSpace();
-        EmitExpression(binary.Right);
+        EmitOperand(binary.Right, binary.Right switch
+        {
+            HclConditionalExpression => true,
+            HclBinaryExpression right => Precedence(right.Operator) <= Precedence(binary.Operator),
+            _ => false,
+        });
     }
+
+    private static bool ParenthesizesLeft(HclBinaryExpression binary) => binary.Left switch
+    {
+        HclConditionalExpression => true,
+        HclBinaryExpression left => Precedence(left.Operator) < Precedence(binary.Operator),
+        _ => false,
+    };
+
+    /// <summary>
+    /// Determines whether the emitted expression starts with <c>(</c>. <c>terraform fmt</c> reads
+    /// a keyword followed by <c>(</c> as a function call and removes the space between them.
+    /// </summary>
+    private static bool StartsWithParenthesis(HclExpression expression) => expression switch
+    {
+        HclBinaryExpression binary => ParenthesizesLeft(binary) || StartsWithParenthesis(binary.Left),
+        HclConditionalExpression cond =>
+            cond.Condition is HclConditionalExpression || StartsWithParenthesis(cond.Condition),
+        HclAttributeAccessExpression access => IsOperation(access.Source) || StartsWithParenthesis(access.Source),
+        HclIndexExpression index => IsOperation(index.Collection) || StartsWithParenthesis(index.Collection),
+        HclSplatExpression splat => IsOperation(splat.Source) || StartsWithParenthesis(splat.Source),
+        _ => false,
+    };
+
+    /// <summary>
+    /// Finds the negation that starts the emitted expression: a unary minus or a negative number literal.
+    /// </summary>
+    private static HclExpression? LeadingNegation(HclExpression expression) => expression switch
+    {
+        HclUnaryExpression { Operator: HclUnaryOperator.Negate } => expression,
+        HclLiteralExpression { Kind: HclLiteralKind.Number, Value: ['-', ..] } => expression,
+        HclBinaryExpression binary => ParenthesizesLeft(binary) ? null : LeadingNegation(binary.Left),
+        HclConditionalExpression cond =>
+            cond.Condition is HclConditionalExpression ? null : LeadingNegation(cond.Condition),
+        HclAttributeAccessExpression access => IsOperation(access.Source) ? null : LeadingNegation(access.Source),
+        HclIndexExpression index => IsOperation(index.Collection) ? null : LeadingNegation(index.Collection),
+        HclSplatExpression splat => IsOperation(splat.Source) ? null : LeadingNegation(splat.Source),
+        _ => null,
+    };
+
+    /// <summary>
+    /// Emits an expression that follows <c>in</c>, <c>if</c> or <c>=&gt;</c>. After these tokens
+    /// <c>terraform fmt</c> reads a minus as subtraction and puts a space after it.
+    /// </summary>
+    private void EmitAfterKeyword(HclExpression expression)
+    {
+        _spacedNegation = LeadingNegation(expression);
+        EmitExpression(expression);
+        _spacedNegation = null;
+    }
+
+    private bool TakeSpacedNegation(HclExpression expression)
+    {
+        if (!ReferenceEquals(expression, _spacedNegation))
+        {
+            return false;
+        }
+
+        _spacedNegation = null;
+
+        return true;
+    }
+
+    private void WriteKeyword(string keyword, HclExpression next)
+    {
+        _writer.WriteRawString(StartsWithParenthesis(next) ? $" {keyword}" : $" {keyword} ");
+    }
+
+    private void EmitOperand(HclExpression operand, bool parenthesize)
+    {
+        if (!parenthesize)
+        {
+            EmitExpression(operand);
+
+            return;
+        }
+
+        _writer.WriteRawHcl("("u8);
+        EmitExpression(operand);
+        _writer.WriteRawHcl(")"u8);
+    }
+
+    private static bool IsOperation(HclExpression expression)
+        => expression is HclBinaryExpression or HclUnaryExpression or HclConditionalExpression;
 
     private void EmitUnary(HclUnaryExpression unary)
     {
         _writer.WriteRawString(unary.Operator switch
         {
-            HclUnaryOperator.Negate => "-",
+            HclUnaryOperator.Negate => TakeSpacedNegation(unary) ? "- " : "-",
             HclUnaryOperator.Not => "!",
             _ => throw new InvalidOperationException($"Unknown unary operator: {unary.Operator}"),
         });
-        EmitExpression(unary.Operand);
+        EmitOperand(unary.Operand, unary.Operand is HclBinaryExpression or HclConditionalExpression);
     }
 
     private void EmitConditional(HclConditionalExpression cond)
     {
-        EmitExpression(cond.Condition);
+        EmitOperand(cond.Condition, cond.Condition is HclConditionalExpression);
         _writer.WriteRawHcl(" ? "u8);
         EmitExpression(cond.TrueResult);
         _writer.WriteRawHcl(" : "u8);
@@ -251,20 +354,8 @@ public sealed class HclFileEmitter
         _writer.WriteRawString(func.Name);
         _writer.WriteRawHcl("("u8);
 
-        for (int i = 0; i < func.Arguments.Count; i++)
-        {
-            if (i > 0)
-            {
-                _writer.WriteComma();
-            }
-
-            EmitExpression(func.Arguments[i]);
-
-            if (func.ExpandFinalArgument && i == func.Arguments.Count - 1)
-            {
-                _writer.WriteRawHcl("..."u8);
-            }
-        }
+        bool multiLine = HclExpressionLayout.ExpandsArguments(func, _preserveComments);
+        EmitList(func.Arguments, func.DanglingComments, multiLine, func.ExpandFinalArgument);
 
         _writer.WriteRawHcl(")"u8);
     }
@@ -273,22 +364,82 @@ public sealed class HclFileEmitter
     {
         _writer.WriteTupleStart();
 
-        for (int i = 0; i < tuple.Elements.Count; i++)
-        {
-            if (i > 0)
-            {
-                _writer.WriteComma();
-            }
-
-            EmitExpression(tuple.Elements[i]);
-        }
+        bool multiLine = HclExpressionLayout.ExpandsElements(tuple.Elements, tuple.DanglingComments, _preserveComments);
+        EmitList(tuple.Elements, tuple.DanglingComments, multiLine, expandFinal: false);
 
         _writer.WriteTupleEnd();
     }
 
+    /// <summary>
+    /// Emits the comma separated items of a tuple or call, either inline (a multi-line item then
+    /// spans the lines itself) or with every item on its own line. Comments are written only in
+    /// the second form, which the layout chooses whenever there is a comment to keep.
+    /// </summary>
+    private void EmitList(List<HclExpression> items, List<HclComment> dangling, bool multiLine, bool expandFinal)
+    {
+        if (!multiLine)
+        {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (i > 0)
+                {
+                    _writer.WriteComma();
+                }
+
+                EmitExpression(items[i]);
+
+                if (expandFinal && i == items.Count - 1)
+                {
+                    _writer.WriteRawHcl("..."u8);
+                }
+            }
+
+            return;
+        }
+
+        _writer.WriteNewLine();
+        _writer.CurrentDepth_Increment();
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            HclExpression item = items[i];
+            EmitComments(item.LeadingComments);
+            _writer.WriteIndent();
+            EmitExpression(item);
+
+            if (expandFinal && i == items.Count - 1)
+            {
+                _writer.WriteRawHcl("..."u8);
+            }
+
+            if (i < items.Count - 1)
+            {
+                if (item is HclTemplateExpression { IsHeredoc: true })
+                {
+                    // The closing marker owns its line, so the separator has to move to the next one.
+                    _writer.WriteNewLine();
+                    _writer.WriteIndent();
+                }
+
+                _writer.WriteRawHcl(","u8);
+                EmitTrailingComment(item.TrailingComment);
+            }
+            else
+            {
+                EmitTrailingComment(item.TrailingComment, item);
+            }
+
+            _writer.WriteNewLine();
+        }
+
+        EmitComments(dangling);
+        _writer.CurrentDepth_Decrement();
+        _writer.WriteIndent();
+    }
+
     private void EmitObject(HclObjectExpression obj)
     {
-        if (obj.Elements.Count == 0)
+        if (obj.Elements.Count == 0 && (!_preserveComments || obj.DanglingComments.Count == 0))
         {
             _writer.WriteObjectStart();
             _writer.WriteObjectEnd();
@@ -297,28 +448,13 @@ public sealed class HclFileEmitter
 
         _writer.WriteObjectStart();
 
-        // Compute key alignment within this object
-        var keyLengths = new List<int>(obj.Elements.Count);
-        foreach (HclObjectElement elem in obj.Elements)
-        {
-            keyLengths.Add(EstimateExpressionLength(elem.Key, elem.ForceKey));
-        }
-
-        int maxKeyLength = 0;
-        foreach (int len in keyLengths)
-        {
-            if (len > maxKeyLength)
-            {
-                maxKeyLength = len;
-            }
-        }
-
         _writer.WriteNewLine();
         _writer.CurrentDepth_Increment();
 
         for (int i = 0; i < obj.Elements.Count; i++)
         {
             HclObjectElement elem = obj.Elements[i];
+            EmitComments(elem.LeadingComments);
             _writer.WriteIndent();
 
             if (elem.ForceKey)
@@ -332,13 +468,6 @@ public sealed class HclFileEmitter
                 EmitExpression(elem.Key);
             }
 
-            int keyLen = keyLengths[i];
-            int pad = maxKeyLength - keyLen;
-            for (int p = 0; p < pad; p++)
-            {
-                _writer.WriteSpace();
-            }
-
             if (elem.UsesColon)
             {
                 _writer.WriteColon();
@@ -349,9 +478,11 @@ public sealed class HclFileEmitter
             }
 
             EmitExpression(elem.Value);
+            EmitTrailingComment(elem.TrailingComment, elem.Value);
             _writer.WriteNewLine();
         }
 
+        EmitComments(obj.DanglingComments);
         _writer.CurrentDepth_Decrement();
         _writer.WriteIndent();
         _writer.WriteObjectEnd();
@@ -359,7 +490,7 @@ public sealed class HclFileEmitter
 
     private void EmitFor(HclForExpression forExpr)
     {
-        _writer.WriteRawHcl(forExpr.IsObjectFor ? "{"u8 : "["u8);
+        _writer.WriteRawHcl(forExpr.IsObjectFor ? "{ "u8 : "["u8);
         _writer.WriteRawString("for ");
 
         if (forExpr.ValueVariable is not null)
@@ -373,17 +504,20 @@ public sealed class HclFileEmitter
             _writer.WriteRawString(forExpr.KeyVariable);
         }
 
-        _writer.WriteRawString(" in ");
-        EmitExpression(forExpr.Collection);
+        WriteKeyword("in", forExpr.Collection);
+        EmitAfterKeyword(forExpr.Collection);
         _writer.WriteRawString(" : ");
 
         if (forExpr.IsObjectFor && forExpr.KeyExpression is not null)
         {
             EmitExpression(forExpr.KeyExpression);
             _writer.WriteArrow();
+            EmitAfterKeyword(forExpr.ValueExpression);
         }
-
-        EmitExpression(forExpr.ValueExpression);
+        else
+        {
+            EmitExpression(forExpr.ValueExpression);
+        }
 
         if (forExpr.IsGrouped)
         {
@@ -392,23 +526,23 @@ public sealed class HclFileEmitter
 
         if (forExpr.Condition is not null)
         {
-            _writer.WriteRawString(" if ");
-            EmitExpression(forExpr.Condition);
+            WriteKeyword("if", forExpr.Condition);
+            EmitAfterKeyword(forExpr.Condition);
         }
 
-        _writer.WriteRawHcl(forExpr.IsObjectFor ? "}"u8 : "]"u8);
+        _writer.WriteRawHcl(forExpr.IsObjectFor ? " }"u8 : "]"u8);
     }
 
     private void EmitAttributeAccess(HclAttributeAccessExpression attrAccess)
     {
-        EmitExpression(attrAccess.Source);
+        EmitOperand(attrAccess.Source, IsOperation(attrAccess.Source));
         _writer.WriteRawHcl("."u8);
         _writer.WriteRawString(attrAccess.Name);
     }
 
     private void EmitIndex(HclIndexExpression index)
     {
-        EmitExpression(index.Collection);
+        EmitOperand(index.Collection, IsOperation(index.Collection));
         if (index.IsLegacy)
         {
             _writer.WriteRawHcl("."u8);
@@ -424,7 +558,7 @@ public sealed class HclFileEmitter
 
     private void EmitSplat(HclSplatExpression splat)
     {
-        EmitExpression(splat.Source);
+        EmitOperand(splat.Source, IsOperation(splat.Source));
         if (splat.IsFullSplat)
         {
             _writer.WriteRawHcl("[*]"u8);
@@ -514,14 +648,27 @@ public sealed class HclFileEmitter
         }
     }
 
-    private void EmitTrailingComment(HclComment? comment)
+    /// <summary>
+    /// Writes a comment at the end of the current line. After a heredoc it goes on the next line
+    /// instead, because the closing marker has to be alone on its line.
+    /// </summary>
+    private void EmitTrailingComment(HclComment? comment, HclExpression? after = null)
     {
         if (!_preserveComments || comment is null)
         {
             return;
         }
 
-        _writer.WriteSpace();
+        if (after is HclTemplateExpression { IsHeredoc: true })
+        {
+            _writer.WriteNewLine();
+            _writer.WriteIndent();
+        }
+        else
+        {
+            _writer.WriteSpace();
+        }
+
         switch (comment.Style)
         {
             case HclCommentStyle.Line:
@@ -537,6 +684,18 @@ public sealed class HclFileEmitter
     }
 
     // ── Helpers ─────────────────────────────────────────────────
+
+    private static int Precedence(HclBinaryOperator op) => op switch
+    {
+        HclBinaryOperator.Or => 1,
+        HclBinaryOperator.And => 2,
+        HclBinaryOperator.Equal or HclBinaryOperator.NotEqual => 3,
+        HclBinaryOperator.LessThan or HclBinaryOperator.GreaterThan
+            or HclBinaryOperator.LessEqual or HclBinaryOperator.GreaterEqual => 4,
+        HclBinaryOperator.Add or HclBinaryOperator.Subtract => 5,
+        HclBinaryOperator.Multiply or HclBinaryOperator.Divide or HclBinaryOperator.Modulo => 6,
+        _ => throw new InvalidOperationException($"Unknown operator: {op}"),
+    };
 
     private static string OperatorToString(HclBinaryOperator op) => op switch
     {
@@ -555,20 +714,4 @@ public sealed class HclFileEmitter
         HclBinaryOperator.Or => "||",
         _ => throw new InvalidOperationException($"Unknown operator: {op}"),
     };
-
-    /// <summary>
-    /// Estimates the rendered length of an expression (for key alignment).
-    /// </summary>
-    private static int EstimateExpressionLength(HclExpression expr, bool forceParen = false)
-    {
-        int extra = forceParen ? 2 : 0; // parens
-        return extra + expr switch
-        {
-            HclLiteralExpression lit when lit.Kind == HclLiteralKind.String =>
-                (lit.Value?.Length ?? 0) + 2, // quotes
-            HclLiteralExpression lit => lit.Value?.Length ?? 0,
-            HclVariableExpression v => v.Name.Length,
-            _ => 10, // rough estimate for complex expressions
-        };
-    }
 }

@@ -602,11 +602,13 @@ container.Elements.Add(new HclObjectElement
 var containers = new HclTupleExpression();
 containers.Elements.Add(container);
 builder.Set("containers", containers);
-// Emits (multi-line, properly indented inside the module block):
-//   containers = [{
-//                   name = "web"
-//                   port = 8080
-//                 }]
+// Emits (multi-line, indented by the module block only, as terraform fmt expects):
+//   containers = [
+//     {
+//       name = "web"
+//       port = 8080
+//     }
+//   ]
 ```
 
 ### Emitting expressions standalone
@@ -777,7 +779,7 @@ module "my-app" {
 }
 ```
 
-Arguments are automatically aligned (matching `terraform fmt`). Sections are separated by blank lines in this order: source/version, arguments, commented optionals, meta-arguments.
+Arguments are aligned the way `terraform fmt` does: `=` signs line up across adjacent single-line arguments, while a multi-line argument is never padded and starts a new alignment run. Sections are separated by blank lines in this order: source/version, arguments, commented optionals, meta-arguments.
 
 ### Variable declarations
 
@@ -850,7 +852,7 @@ region  = "eu-west-1"
 labels  = { team = "platform" }
 ```
 
-When a source module is available, variable descriptions are included as comments with `(Required)` / `(Optional)` labels. Keys are aligned. Inline comments from `InputValue.Comment` appear after the value.
+When a source module is available, variable descriptions are included as comments with `(Required)` / `(Optional)` labels. Keys are aligned across adjacent single-line values (a multi-line value, comment line or blank line starts a new run). Inline comments from `InputValue.Comment` are aligned and appear after the value; for a multi-line value the comment follows the closing bracket, and for a heredoc it is written on its own line after the end marker.
 
 ### Writing files to disk
 

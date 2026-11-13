@@ -85,7 +85,7 @@ public sealed class Utf8HclWriterExpressionTests
         });
 
         string result = Emit(file);
-        Assert.Equal("map = {for k, v in items : k => v}\n", result);
+        Assert.Equal("map = { for k, v in items : k => v }\n", result);
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public sealed class Utf8HclWriterExpressionTests
     }
 
     [Fact]
-    public void EmitComplexNestedExpression()
+    public void EmitComplexNestedExpression_LowerPrecedenceLeftOperand_IsParenthesized()
     {
         var file = new HclFile();
         file.Body.Attributes.Add(new HclAttribute
@@ -232,7 +232,7 @@ public sealed class Utf8HclWriterExpressionTests
         });
 
         string result = Emit(file);
-        Assert.Equal("value = 1 + 2 * 3\n", result);
+        Assert.Equal("value = (1 + 2) * 3\n", result);
     }
 
     [Fact]
@@ -433,6 +433,6 @@ public sealed class Utf8HclWriterExpressionTests
         });
 
         string result = Emit(file);
-        Assert.Equal("grouped = {for k, v in items : k => v...}\n", result);
+        Assert.Equal("grouped = { for k, v in items : k => v... }\n", result);
     }
 }

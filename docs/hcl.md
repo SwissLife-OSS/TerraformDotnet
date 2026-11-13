@@ -199,6 +199,30 @@ foreach (var comment in file.DanglingComments)
 }
 ```
 
+The same model applies inside expressions:
+
+```hcl
+tags = {
+  # leading comment of the "env" element
+  env  = "prod" # trailing comment of the "env" element
+  team = "platform"
+  # dangling comment of the object
+} # trailing comment of the "tags" attribute
+
+zones = [
+  "1", # trailing comment of the element
+  "2"
+  # dangling comment of the tuple
+]
+```
+
+- `HclObjectElement.LeadingComments` / `TrailingComment` hold comments around an object element.
+- Tuple elements and call arguments are expressions, so they use `LeadingComments` / `TrailingComment` of the expression.
+- `DanglingComments` on `HclObjectExpression`, `HclTupleExpression`, `HclFunctionCallExpression` and `HclBody` hold comments before the closing bracket.
+- A block's `TrailingComment` is the comment after its closing `}`.
+
+Limits: a comment on an opening line (`{ # note`) becomes a leading comment of the first element, comments inside operators, conditionals, `for` expressions, index brackets and templates move to the next attribute, and blank lines around comments are not kept.
+
 ---
 
 ## Low-Level Reader
@@ -282,7 +306,7 @@ resource "aws_s3_bucket" "assets" {
 
 ### Attribute alignment
 
-Attributes in the same block are aligned to the longest name, matching `terraform fmt`. You can compute padding explicitly:
+Like `terraform fmt`, `=` signs are aligned only across runs of adjacent single-line attributes. An attribute whose value spans several lines (an object, a multi-line tuple or call, a `for` over an object body) gets no padding and ends the run; blank lines, comments and blocks end it too. Heredocs stay in the run. You can compute padding for a plain list of names explicitly:
 
 ```csharp
 var names = new List<string> { "source", "version", "department", "environment" };
@@ -354,7 +378,35 @@ writer.Flush();
 string output = Encoding.UTF8.GetString(buffer.WrittenSpan);
 ```
 
-The `HclFileEmitter` preserves comments by default and produces output identical to `terraform fmt`.
+The `HclFileEmitter` preserves comments by default and produces output identical to `terraform fmt`. A tuple or function call with a multi-line item is written one item per line, and an object-style `for` is written as `{ for ... }`; both are what `terraform fmt` leaves untouched. A call with exactly one multi-line argument keeps it inline, as in `merge(var.a, {` … `})`, and a tuple, call or object that holds a comment is written on several lines.
+
+Parentheses are not stored in the AST: the emitter writes them where the tree needs them, so `(a + b) * 2` stays as is and `a + (b * 2)` becomes `a + b * 2`.
+
+String literal values keep template sequences as written. `"${join(", ", var.list)}"` round-trips unchanged: only the text outside `${...}`/`%{...}` and strings nested inside them are escaped, and `$${`/`%%{` stay literal.
+
+### Formatting text
+
+`HclFormatter` applies the layout rules of `terraform fmt` to HCL text: indentation, `=` alignment and trailing comment alignment. Line breaks, the spacing inside a line, and heredoc bodies are kept as written.
+
+```csharp
+using TerraformDotnet.Hcl.Writer;
+
+string formatted = HclFormatter.Format("""
+    locals {
+    a = 1
+    long_name = 2 # note
+    }
+    """);
+
+// locals {
+//   a         = 1
+//   long_name = 2 # note
+// }
+
+byte[] utf8 = HclFormatter.Format("a = 1\n"u8);
+```
+
+`Format` throws `HclSyntaxException` when the text cannot be tokenized or its brackets do not balance.
 
 ---
 

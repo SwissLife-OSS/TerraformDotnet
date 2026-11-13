@@ -11,6 +11,9 @@ public sealed class HclFunctionCallExpression : HclExpression
     /// <summary>Gets the function arguments.</summary>
     public List<HclExpression> Arguments { get; } = [];
 
+    /// <summary>Gets the comments on their own lines before the closing <c>)</c>.</summary>
+    public List<HclComment> DanglingComments { get; } = [];
+
     /// <summary>Gets or sets whether the final argument uses expansion (<c>...</c>).</summary>
     public bool ExpandFinalArgument { get; set; }
 
@@ -30,8 +33,12 @@ public sealed class HclFunctionCallExpression : HclExpression
 
         foreach (var arg in Arguments)
         {
-            clone.Arguments.Add((HclExpression)arg.DeepClone());
+            var argClone = (HclExpression)arg.DeepClone();
+            arg.CopyCommentsTo(argClone);
+            clone.Arguments.Add(argClone);
         }
+
+        clone.DanglingComments.AddRange(DanglingComments);
 
         return clone;
     }
