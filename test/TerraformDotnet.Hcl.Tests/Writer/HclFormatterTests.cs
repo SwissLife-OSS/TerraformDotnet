@@ -483,4 +483,21 @@ public sealed class HclFormatterTests
             Assert.Equal(await terraform.FormatAsync(hcl), HclFormatter.Format(hcl));
         }
     }
+
+    [Fact]
+    public void TryFormatFormatsValidHcl()
+    {
+        Assert.True(HclFormatter.TryFormat("a = 1\nlong = 2\n", out string? formatted));
+        Assert.Equal("a    = 1\nlong = 2\n", formatted);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("a = ")]
+    [InlineData("resource \"x\" {")]
+    public void TryFormatReturnsFalseForInvalidHcl(string? hcl)
+    {
+        Assert.False(HclFormatter.TryFormat(hcl, out string? formatted));
+        Assert.Null(formatted);
+    }
 }

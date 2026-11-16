@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Text;
 using TerraformDotnet.Hcl.Exceptions;
 using TerraformDotnet.Hcl.Writer;
 
@@ -76,6 +77,20 @@ public sealed class HclFileEmitter
         }
 
         _target.WriteRawHcl(formatted.WrittenSpan);
+    }
+
+    /// <summary>Emits <paramref name="file"/> with the default writer options and returns the text.</summary>
+    internal static string EmitToString(HclFile file)
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+
+        using (var writer = new Utf8HclWriter(buffer))
+        {
+            new HclFileEmitter(writer).Emit(file);
+            writer.Flush();
+        }
+
+        return Encoding.UTF8.GetString(buffer.WrittenSpan);
     }
 
     // ── Body & structure ────────────────────────────────────────

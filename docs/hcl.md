@@ -21,6 +21,8 @@ Complete guide for the HCL parser, writer, and evaluation engine.
   - [Collections](#collections)
   - [Comments](#writing-comments)
   - [AST-driven emission](#ast-driven-emission)
+  - [Building a tree in code](#building-a-tree-in-code)
+  - [Formatting text](#formatting-text)
 - [Round-Trip Editing](#round-trip-editing)
 - [Expression Evaluation](#expression-evaluation)
   - [Variable binding](#variable-binding)
@@ -355,9 +357,15 @@ writer.WriteAttributeEnd();
 ### Writing comments
 
 ```csharp
-writer.WriteLineComment(" This is a comment");
+writer.WriteHashComment(" This is a comment");
 // Output: # This is a comment
+
+writer.WriteLineComment(" This is a comment");
+// Output: // This is a comment
 ```
+
+`WriteHashComment` and `WriteLineComment` throw `ArgumentException` when the text contains a line break, and
+`WriteBlockComment` throws when it contains `*/`: either would end the comment and turn the rest of the text into HCL.
 
 ### AST-driven emission
 
@@ -384,6 +392,47 @@ Parentheses are not stored in the AST: the emitter writes them where the tree ne
 
 String literal values keep template sequences as written. `"${join(", ", var.list)}"` round-trips unchanged: only the text outside `${...}`/`%{...}` and strings nested inside them are escaped, and `$${`/`%%{` stay literal.
 
+`HclFile.ToHcl()` and `HclExpression.ToHcl()` do the same in one call. An expression is laid out as it would be as an
+attribute value, without a trailing line break:
+
+```csharp
+string text = file.ToHcl();
+string value = HclExpression.Parse("merge(var.tags, { env = \"prod\" })").ToHcl();
+```
+
+### Building a tree in code
+
+Factories create nodes with the same values the parser produces:
+
+```csharp
+var tags = new HclObjectExpression();
+tags.Add("env", HclLiteralExpression.String("prod"));        // env = "prod"
+tags.Add("cost.center", HclLiteralExpression.Number(42));    // "cost.center" = 42
+tags.Add("enabled", HclLiteralExpression.Bool(true));
+tags.Add("owner", HclLiteralExpression.Null());
+
+var module = new HclBlock { Type = "module", Labels = { "kv" } };
+module.Body.Attributes.Add(new HclAttribute
+{
+    Name = "source",
+    Value = HclLiteralExpression.String("./modules/kv"),
+    TrailingComment = HclComment.Hash("pinned by the platform team"),
+});
+module.Body.Attributes.Add(new HclAttribute { Name = "tags", Value = tags });
+
+string hcl = new HclFile { Body = { Blocks = { module } } }.ToHcl();
+```
+
+- `HclLiteralExpression.String` keeps template sequences as written, like a parsed literal: `${...}` stays an
+  interpolation and `$${` stays literal text.
+- `HclLiteralExpression.Number` writes numbers with the invariant culture and without an exponent (`1e20` becomes
+  `100000000000000000000`). It throws for `NaN` and infinities.
+- `HclObjectExpression.Add(string, HclExpression)` writes the key bare when it is an identifier, and quoted otherwise
+  (`"a.b"`, `"1x"`, non-ASCII keys, and the keywords `for`, `true`, `false` and `null`).
+- `HclComment.Hash`, `HclComment.Line` and `HclComment.Block` put one space after the comment marker. The line comment
+  factories throw for text with a line break, and `Block` throws for text containing `*/`.
+- `HclExpression.Parse` builds the node for any expression written as text, such as `var.tags` or `upper(local.x)`.
+
 ### Formatting text
 
 `HclFormatter` applies the layout rules of `terraform fmt` to HCL text: indentation, `=` alignment and trailing comment alignment. Line breaks, the spacing inside a line, and heredoc bodies are kept as written.
@@ -406,7 +455,12 @@ string formatted = HclFormatter.Format("""
 byte[] utf8 = HclFormatter.Format("a = 1\n"u8);
 ```
 
-`Format` throws `HclSyntaxException` when the text cannot be tokenized or its brackets do not balance.
+`Format` throws `HclSyntaxException` when the text cannot be tokenized or its brackets do not balance. `TryFormat`
+returns `false` instead:
+
+```csharp
+string text = HclFormatter.TryFormat(hcl, out string? formatted) ? formatted : hcl;
+```
 
 ---
 
@@ -428,13 +482,10 @@ HclFile file = HclFile.Load(hcl);
 // Modify — change the default value
 var variable = file.Body.Blocks[0];
 var defaultAttr = variable.Body.Attributes.First(a => a.Name == "default");
-defaultAttr.Value = new HclLiteralExpression("eu-west-1");
+defaultAttr.Value = HclLiteralExpression.String("eu-west-1");
 
 // Emit
-var buffer = new ArrayBufferWriter<byte>();
-using var writer = new Utf8HclWriter(buffer);
-new HclFileEmitter(writer).Emit(file);
-writer.Flush();
+string output = file.ToHcl();
 // variable "region" {
 //   type    = string
 //   default = "eu-west-1"

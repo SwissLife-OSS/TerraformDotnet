@@ -214,4 +214,20 @@ public sealed class Utf8HclWriterFormattingTests
         string result = Encoding.UTF8.GetString(ms.ToArray());
         Assert.Equal("x = 42\n", result);
     }
+
+    [Theory]
+    [InlineData("a\nb")]
+    [InlineData("a\rb")]
+    public void LineCommentsRejectLineBreaks(string text)
+    {
+        Assert.Throws<ArgumentException>(() => Write(w => w.WriteHashComment(text)));
+        Assert.Throws<ArgumentException>(() => Write(w => w.WriteLineComment(text)));
+    }
+
+    [Fact]
+    public void BlockCommentRejectsEndMarkerButAllowsLineBreaks()
+    {
+        Assert.Throws<ArgumentException>(() => Write(w => w.WriteBlockComment(" a */ b ")));
+        Assert.Equal("/* a\nb */", Write(w => w.WriteBlockComment(" a\nb ")));
+    }
 }

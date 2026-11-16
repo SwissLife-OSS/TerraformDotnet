@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using TerraformDotnet.Hcl.Common;
 using TerraformDotnet.Hcl.Exceptions;
@@ -48,6 +49,32 @@ public static class HclFormatter
         Format(utf8, 0, output);
 
         return Encoding.UTF8.GetString(output.WrittenSpan);
+    }
+
+    /// <summary>
+    /// Attempts to format HCL text.
+    /// </summary>
+    /// <param name="hcl">The HCL text.</param>
+    /// <param name="formatted">When this method returns <c>true</c>, the formatted text.</param>
+    /// <returns><c>true</c> if the text is valid HCL and was formatted; otherwise <c>false</c>.</returns>
+    public static bool TryFormat(string? hcl, [NotNullWhen(true)] out string? formatted)
+    {
+        formatted = null;
+        if (hcl is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            formatted = Format(hcl);
+
+            return true;
+        }
+        catch (HclException)
+        {
+            return false;
+        }
     }
 
     /// <summary>

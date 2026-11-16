@@ -235,8 +235,10 @@ public sealed class Utf8HclWriter : IDisposable
     /// Writes a line comment: <c>// text</c>.
     /// </summary>
     /// <param name="text">The comment text (without the <c>//</c> prefix).</param>
+    /// <exception cref="ArgumentException"><paramref name="text"/> contains a line break.</exception>
     public void WriteLineComment(string text)
     {
+        ThrowIfLineBreak(text);
         WriteRaw("//"u8);
         WriteRaw(Encoding.UTF8.GetBytes(text));
     }
@@ -245,8 +247,10 @@ public sealed class Utf8HclWriter : IDisposable
     /// Writes a hash comment: <c># text</c>.
     /// </summary>
     /// <param name="text">The comment text (without the <c>#</c> prefix).</param>
+    /// <exception cref="ArgumentException"><paramref name="text"/> contains a line break.</exception>
     public void WriteHashComment(string text)
     {
+        ThrowIfLineBreak(text);
         WriteRaw((byte)'#');
         WriteRaw(Encoding.UTF8.GetBytes(text));
     }
@@ -255,11 +259,30 @@ public sealed class Utf8HclWriter : IDisposable
     /// Writes a block comment: <c>/* text */</c>.
     /// </summary>
     /// <param name="text">The comment text (without the <c>/* */</c> delimiters).</param>
+    /// <exception cref="ArgumentException"><paramref name="text"/> contains <c>*/</c>.</exception>
     public void WriteBlockComment(string text)
     {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.Contains("*/", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("A block comment cannot contain '*/'.", nameof(text));
+        }
+
         WriteRaw("/*"u8);
         WriteRaw(Encoding.UTF8.GetBytes(text));
         WriteRaw("*/"u8);
+    }
+
+    // A line break would end the comment and turn the rest of the text into HCL.
+    private static void ThrowIfLineBreak(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.AsSpan().IndexOfAny('\r', '\n') >= 0)
+        {
+            throw new ArgumentException("A line comment cannot contain a line break.", nameof(text));
+        }
     }
 
     // ── Raw output ──────────────────────────────────────────────

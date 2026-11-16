@@ -38,6 +38,9 @@ The emitted text changes in these cases. All new output is what `terraform fmt` 
 - String literals that contain a template with nested quotes (`"${join(", ", var.list)}"`) are written as they were
   parsed. They used to be escaped into invalid HCL.
 - Characters outside the Basic Multilingual Plane (emoji) are written correctly. They used to be written as `��`.
+- `Utf8HclWriter.WriteHashComment` and `WriteLineComment` (and so the emitter) throw `ArgumentException` when the
+  comment text contains a line break, and `WriteBlockComment` throws when it contains `*/`. Such text used to be
+  written as is, which ended the comment and turned the rest of the text into HCL. Parsed comments never contain these.
 - When a tree built in code is not valid HCL (for example an attribute name with a space), the emitter writes it
   without formatting instead of throwing.
 - Emitting is about 1.6–1.9× slower because of the extra formatting pass (a large file takes about 55 µs instead of
@@ -63,6 +66,14 @@ The emitted text changes in these cases. All new output is what `terraform fmt` 
   the closing bracket.
 - A block's `TrailingComment` now holds the comment after its closing `}`, and tuple elements and call arguments carry
   their `LeadingComments` and `TrailingComment`.
+- `HclFile.ToHcl()` and `HclExpression.ToHcl()` write a tree or an expression as formatted text.
+- `HclFormatter.TryFormat(string, out string?)` returns `false` instead of throwing when the text is not valid HCL.
+- Factories for building trees in code:
+  - `HclLiteralExpression.String`, `Number` (`int`, `long`, `double`, `decimal`), `Bool` and `Null`. Numbers are written
+    with the invariant culture and without an exponent; `NaN` and infinities throw.
+  - `HclObjectExpression.Add(string key, HclExpression value)` writes the key bare when it is an identifier, and quoted
+    otherwise (including `for`, `true`, `false` and `null`).
+  - `HclComment.Hash`, `HclComment.Line` and `HclComment.Block`.
 
 ### Tests and tooling
 
