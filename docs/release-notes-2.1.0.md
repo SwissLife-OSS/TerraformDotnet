@@ -11,6 +11,9 @@ Both packages (`TerraformDotnet` and `TerraformDotnet.Hcl`) ship as 2.1.0.
   comment alignment) to HCL text.
 - **Comments everywhere.** Comments inside objects, tuples, function calls and block bodies are parsed, kept in the
   tree and written back.
+- **Naming conventions.** The new `TerraformDotnet.Naming` namespace generates and checks the names of resources,
+  modules, data sources, variables, outputs, locals and checks. The default is the Terraform style (snake_case), and a
+  convention can be read from the tflint rule `terraform_naming_convention`, so generated code passes the same lint.
 
 ## Breaking changes
 
@@ -74,6 +77,25 @@ The emitted text changes in these cases. All new output is what `terraform fmt` 
   - `HclObjectExpression.Add(string key, HclExpression value)` writes the key bare when it is an identifier, and quoted
     otherwise (including `for`, `true`, `false` and `null`).
   - `HclComment.Hash`, `HclComment.Line` and `HclComment.Block`.
+
+### TerraformDotnet
+
+Naming conventions (`TerraformDotnet.Naming`), see
+[Naming Conventions](terraformdotnet.md#naming-conventions):
+
+- `TerraformNamingConvention` holds one `NameFormat` per `TerraformNameKind` (`Resource`, `Data`, `Module`, `Variable`,
+  `Output`, `Local`, `Check`). `TerraformNamingConvention.Default` is snake_case for every kind; change kinds with a
+  `with` expression or use `TerraformNamingConvention.Uniform(format)`.
+- `NameFormat.SnakeCase`, `MixedSnakeCase` and `None` are the formats of tflint. `NameFormat.KebabCase`,
+  `NameFormat.Unchecked(style)` and `NameFormat.Custom(pattern, style, description)` cover other conventions.
+- `Format(kind, parts)` builds a name. A name that already conforms is returned as it is, so names that are state
+  addresses do not change; other names are lowercased and their separators replaced.
+- `IsValid(kind, name)`, `Validate(HclFile)` and `Validate(TerraformModule)` check names. A `NamingViolation` carries
+  the kind, name, line, Terraform address and the message tflint prints.
+- `TerraformNamingConvention.FromTflintConfig` reads the rule `terraform_naming_convention` from a `.tflint.hcl`
+  (top-level `format` and `custom`, the blocks per type and `custom_formats`) and returns `null` when the
+  configuration does not enable the rule.
+- `TerraformNamingConvention.IsIdentifier(name)` tells whether a name is a valid Terraform name.
 
 ### Tests and tooling
 

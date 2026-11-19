@@ -31,6 +31,11 @@ Load Terraform modules, inspect their structure, and generate module calling cod
   - [Variable declarations](#variable-declarations)
   - [Input values (tfvars)](#input-values-tfvars)
   - [Writing files to disk](#writing-files-to-disk)
+- [Naming Conventions](#naming-conventions)
+  - [Formats](#formats)
+  - [Generating names](#generating-names)
+  - [Checking names](#checking-names)
+  - [Reading the tflint rule](#reading-the-tflint-rule)
 - [End-to-End Example](#end-to-end-example)
 
 ---
@@ -876,6 +881,141 @@ This creates the output directory if it doesn't exist and writes:
 - `resources-app.tf` — the module block
 - `variables-app.tf` — pass-through variable declarations
 - `input-dev.tfvars`, `input-staging.tfvars`, `input-prod.tfvars` — per-environment input values
+
+---
+
+## Naming Conventions
+
+`TerraformDotnet.Naming` keeps the names of generated blocks consistent and in line with a linter. A
+`TerraformNamingConvention` holds one `NameFormat` per kind of name: resource, data source, module, variable, output,
+local value and check. These are the block types of the tflint rule
+[`terraform_naming_convention`](https://github.com/terraform-linters/tflint-ruleset-terraform/blob/main/docs/rules/terraform_naming_convention.md).
+
+The default is the Terraform style, which is also the default of tflint: `snake_case` for every kind.
+
+```csharp
+using TerraformDotnet.Naming;
+
+var convention = TerraformNamingConvention.Default;
+
+// Hyphens for resources, modules and data sources; variables, outputs and locals stay snake_case.
+var hyphens = NameFormat.Custom("^[a-z0-9-]+$");
+convention = convention with { Resource = hyphens, Module = hyphens, Data = hyphens };
+```
+
+### Formats
+
+| Format | Names it accepts | Names it generates |
+|--------|------------------|--------------------|
+| `NameFormat.SnakeCase` | tflint `snake_case`: `^[a-z][a-z0-9]*(_[a-z0-9]+)*$` | `web_app` |
+| `NameFormat.MixedSnakeCase` | tflint `mixed_snake_case`: `^[a-zA-Z][a-zA-Z0-9]*(_[a-zA-Z0-9]+)*$` | `Web_App` (case is kept) |
+| `NameFormat.KebabCase` | `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` (not a tflint format) | `web-app` |
+| `NameFormat.None` | tflint `none`: every name | `web_app` |
+| `NameFormat.Unchecked(style)` | every name | in the given `NameStyle` |
+| `NameFormat.Custom(pattern, style, description)` | names the regular expression matches | in the given `NameStyle` |
+
+A regular expression can check a name but not build one, so a custom format also has a `NameStyle` to generate with.
+When you leave it out, it is the first of snake_case, kebab-case and mixed snake_case that the pattern accepts.
+
+Like tflint, a pattern matches when it matches any part of the name, so anchor it with `^` and `$`. Patterns are .NET
+regular expressions. They run on the non-backtracking engine, which like the RE2 engine of tflint needs linear time;
+patterns with lookarounds or backreferences fall back to the backtracking engine with a one second timeout. The RE2
+syntax is accepted except for POSIX classes (`[[:alpha:]]`), `(?P<name>…)`, `\Q…\E` and `\pL`.
+
+### Generating names
+
+`Format` builds a name from parts:
+
+```csharp
+convention.Format(TerraformNameKind.Module, "dns", "web_app");          // "dns-web-app"
+convention.Format(TerraformNameKind.Variable, "instances", "dns-web");  // "instances_dns_web"
+convention.Format(TerraformNameKind.Resource, "rg", "My.App");          // "rg-my-app"
+```
+
+- The parts are joined with the separator of the style. `null` and empty parts are skipped.
+- **A name that already conforms is returned as it is.** Names of resources, modules and data sources are state
+  addresses, so `Format` never changes a name that is a Terraform identifier and matches the format — even where
+  normalizing would, such as `my--app` under `^[a-z0-9-]+$`.
+- Any other name is normalized: it is lowercased (not in `MixedSnakeCase`), every run of characters other than ASCII
+  letters and digits becomes one separator, and separators at the start and end are removed.
+- Words are not split: `MyApp` becomes `myapp`.
+- Nothing is added. The result can still fail the format, for example when it starts with a digit or a custom pattern
+  requires a prefix. `IsValid` tells; `TerraformNamingConvention.IsIdentifier` tells whether Terraform accepts the
+  name at all.
+- Parts without any letter or digit throw `ArgumentException`.
+
+### Checking names
+
+```csharp
+convention.IsValid(TerraformNameKind.Module, "dns_web"); // false
+
+HclFile file = HclFile.Load(File.ReadAllBytes("main.tf"));
+
+foreach (NamingViolation violation in convention.Validate(file))
+{
+    Console.WriteLine($"main.tf:{violation.Line}: {violation.Message}");
+    // main.tf:3: module name `dns_web` must match the following RegExp: ^[a-z0-9-]+$
+}
+```
+
+`Validate(HclFile)` checks the blocks tflint checks: `resource`, `data` (also inside `check` blocks), `module`,
+`variable`, `output`, `check` and the entries of `locals`. A `NamingViolation` has the `Kind`, `Name`, `Type` (of a
+resource or data source), `Line`, the Terraform `Address` (`module.dns_web`) and the `Message` tflint prints.
+
+`Validate(TerraformModule)` checks a loaded module. A `TerraformModule` holds neither `check` blocks nor positions, so
+those are only covered by `Validate(HclFile)`.
+
+### Reading the tflint rule
+
+`FromTflintConfig` reads the convention from a `.tflint.hcl`, so generated code follows the rule the linter enforces:
+
+```csharp
+TerraformNamingConvention? convention =
+    TerraformNamingConvention.FromTflintConfig(File.ReadAllText(".tflint.hcl"));
+```
+
+```hcl
+rule "terraform_naming_convention" {
+  enabled = true
+
+  module {
+    format = "hyphens"
+  }
+
+  custom_formats = {
+    hyphens = {
+      description = "Module names use '-' as separator"
+      regex       = "^[a-z0-9-]+$"
+    }
+  }
+}
+```
+
+With this configuration modules are generated with hyphens and every other kind in snake_case.
+
+The rule is resolved the way tflint resolves it:
+
+- The top-level `format` (default `snake_case`) or `custom` applies to every block type without its own block.
+- A block (`resource`, `data`, `module`, `variable`, `output`, `locals`, `check`) replaces it for its type.
+- `custom` wins over `format`. `format` is `snake_case`, `mixed_snake_case`, `none` or a key of `custom_formats`.
+- A configuration tflint rejects (an unknown format, an invalid regular expression) throws `FormatException`.
+
+The result is `null` when the configuration does not enable the rule, because tflint then checks no names. The rule is
+enabled by a `rule` block with `enabled = true`, or by `preset = "all"` of the `terraform` plugin without
+`disabled_by_default`. Rules enabled on the tflint command line are not known to the library.
+
+The optional `fallback` convention decides the style to generate with where the rule leaves it open: for a type whose
+format is `none`, and for a custom pattern that accepts the fallback's style. It never changes which names are valid.
+
+```csharp
+// "none" in the rule: generate hyphenated names instead of snake_case.
+var convention = TerraformNamingConvention.FromTflintConfig(
+    tflintConfig,
+    fallback: TerraformNamingConvention.Uniform(NameFormat.KebabCase));
+```
+
+Differences to tflint: a violation of a built-in format names it in lowercase (`mixed_snake_case`) even when the
+configuration writes it in another case, and `# tflint-ignore` comments are not evaluated.
 
 ---
 

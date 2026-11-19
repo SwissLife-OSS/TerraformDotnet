@@ -1,1 +1,85 @@
 #nullable enable
+override TerraformDotnet.Naming.NameFormat.Equals(object? obj) -> bool
+override TerraformDotnet.Naming.NameFormat.GetHashCode() -> int
+override TerraformDotnet.Naming.NameFormat.ToString() -> string!
+override TerraformDotnet.Naming.NamingViolation.Equals(object? obj) -> bool
+override TerraformDotnet.Naming.NamingViolation.GetHashCode() -> int
+override TerraformDotnet.Naming.NamingViolation.ToString() -> string!
+override TerraformDotnet.Naming.TerraformNamingConvention.Equals(object? obj) -> bool
+override TerraformDotnet.Naming.TerraformNamingConvention.GetHashCode() -> int
+override TerraformDotnet.Naming.TerraformNamingConvention.ToString() -> string!
+static TerraformDotnet.Naming.NameFormat.Custom(string! pattern, TerraformDotnet.Naming.NameStyle? style = null, string? description = null) -> TerraformDotnet.Naming.NameFormat!
+static TerraformDotnet.Naming.NameFormat.KebabCase.get -> TerraformDotnet.Naming.NameFormat!
+static TerraformDotnet.Naming.NameFormat.MixedSnakeCase.get -> TerraformDotnet.Naming.NameFormat!
+static TerraformDotnet.Naming.NameFormat.None.get -> TerraformDotnet.Naming.NameFormat!
+static TerraformDotnet.Naming.NameFormat.SnakeCase.get -> TerraformDotnet.Naming.NameFormat!
+static TerraformDotnet.Naming.NameFormat.Unchecked(TerraformDotnet.Naming.NameStyle style) -> TerraformDotnet.Naming.NameFormat!
+static TerraformDotnet.Naming.NamingViolation.operator !=(TerraformDotnet.Naming.NamingViolation? left, TerraformDotnet.Naming.NamingViolation? right) -> bool
+static TerraformDotnet.Naming.NamingViolation.operator ==(TerraformDotnet.Naming.NamingViolation? left, TerraformDotnet.Naming.NamingViolation? right) -> bool
+static TerraformDotnet.Naming.TerraformNamingConvention.Default.get -> TerraformDotnet.Naming.TerraformNamingConvention!
+static TerraformDotnet.Naming.TerraformNamingConvention.FromTflintConfig(TerraformDotnet.Hcl.Nodes.HclFile! config, TerraformDotnet.Naming.TerraformNamingConvention? fallback = null) -> TerraformDotnet.Naming.TerraformNamingConvention?
+static TerraformDotnet.Naming.TerraformNamingConvention.FromTflintConfig(string! hcl, TerraformDotnet.Naming.TerraformNamingConvention? fallback = null) -> TerraformDotnet.Naming.TerraformNamingConvention?
+static TerraformDotnet.Naming.TerraformNamingConvention.IsIdentifier(string! name) -> bool
+static TerraformDotnet.Naming.TerraformNamingConvention.Uniform(TerraformDotnet.Naming.NameFormat! format) -> TerraformDotnet.Naming.TerraformNamingConvention!
+static TerraformDotnet.Naming.TerraformNamingConvention.operator !=(TerraformDotnet.Naming.TerraformNamingConvention? left, TerraformDotnet.Naming.TerraformNamingConvention? right) -> bool
+static TerraformDotnet.Naming.TerraformNamingConvention.operator ==(TerraformDotnet.Naming.TerraformNamingConvention? left, TerraformDotnet.Naming.TerraformNamingConvention? right) -> bool
+TerraformDotnet.Naming.NameFormat
+TerraformDotnet.Naming.NameFormat.Equals(TerraformDotnet.Naming.NameFormat? other) -> bool
+TerraformDotnet.Naming.NameFormat.Format(params string?[]! parts) -> string!
+TerraformDotnet.Naming.NameFormat.IsChecked.get -> bool
+TerraformDotnet.Naming.NameFormat.IsMatch(string! name) -> bool
+TerraformDotnet.Naming.NameFormat.Name.get -> string!
+TerraformDotnet.Naming.NameFormat.Pattern.get -> string?
+TerraformDotnet.Naming.NameFormat.Style.get -> TerraformDotnet.Naming.NameStyle
+TerraformDotnet.Naming.NameStyle
+TerraformDotnet.Naming.NameStyle.KebabCase = 2 -> TerraformDotnet.Naming.NameStyle
+TerraformDotnet.Naming.NameStyle.MixedSnakeCase = 1 -> TerraformDotnet.Naming.NameStyle
+TerraformDotnet.Naming.NameStyle.SnakeCase = 0 -> TerraformDotnet.Naming.NameStyle
+TerraformDotnet.Naming.NamingViolation
+TerraformDotnet.Naming.NamingViolation.<Clone>$() -> TerraformDotnet.Naming.NamingViolation!
+TerraformDotnet.Naming.NamingViolation.Address.get -> string!
+TerraformDotnet.Naming.NamingViolation.Deconstruct(out TerraformDotnet.Naming.TerraformNameKind Kind, out string! Name, out TerraformDotnet.Naming.NameFormat! Format) -> void
+TerraformDotnet.Naming.NamingViolation.Equals(TerraformDotnet.Naming.NamingViolation? other) -> bool
+TerraformDotnet.Naming.NamingViolation.Format.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.NamingViolation.Format.init -> void
+TerraformDotnet.Naming.NamingViolation.Kind.get -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.NamingViolation.Kind.init -> void
+TerraformDotnet.Naming.NamingViolation.Line.get -> int?
+TerraformDotnet.Naming.NamingViolation.Line.init -> void
+TerraformDotnet.Naming.NamingViolation.Message.get -> string!
+TerraformDotnet.Naming.NamingViolation.Name.get -> string!
+TerraformDotnet.Naming.NamingViolation.Name.init -> void
+TerraformDotnet.Naming.NamingViolation.NamingViolation(TerraformDotnet.Naming.TerraformNameKind Kind, string! Name, TerraformDotnet.Naming.NameFormat! Format) -> void
+TerraformDotnet.Naming.NamingViolation.Type.get -> string?
+TerraformDotnet.Naming.NamingViolation.Type.init -> void
+TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNameKind.Check = 6 -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNameKind.Data = 1 -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNameKind.Local = 5 -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNameKind.Module = 2 -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNameKind.Output = 4 -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNameKind.Resource = 0 -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNameKind.Variable = 3 -> TerraformDotnet.Naming.TerraformNameKind
+TerraformDotnet.Naming.TerraformNamingConvention
+TerraformDotnet.Naming.TerraformNamingConvention.<Clone>$() -> TerraformDotnet.Naming.TerraformNamingConvention!
+TerraformDotnet.Naming.TerraformNamingConvention.Check.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.Check.init -> void
+TerraformDotnet.Naming.TerraformNamingConvention.Data.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.Data.init -> void
+TerraformDotnet.Naming.TerraformNamingConvention.Equals(TerraformDotnet.Naming.TerraformNamingConvention? other) -> bool
+TerraformDotnet.Naming.TerraformNamingConvention.Format(TerraformDotnet.Naming.TerraformNameKind kind, params string?[]! parts) -> string!
+TerraformDotnet.Naming.TerraformNamingConvention.GetFormat(TerraformDotnet.Naming.TerraformNameKind kind) -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.IsValid(TerraformDotnet.Naming.TerraformNameKind kind, string! name) -> bool
+TerraformDotnet.Naming.TerraformNamingConvention.Local.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.Local.init -> void
+TerraformDotnet.Naming.TerraformNamingConvention.Module.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.Module.init -> void
+TerraformDotnet.Naming.TerraformNamingConvention.Output.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.Output.init -> void
+TerraformDotnet.Naming.TerraformNamingConvention.Resource.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.Resource.init -> void
+TerraformDotnet.Naming.TerraformNamingConvention.TerraformNamingConvention() -> void
+TerraformDotnet.Naming.TerraformNamingConvention.Validate(TerraformDotnet.Hcl.Nodes.HclFile! file) -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Naming.NamingViolation!>!
+TerraformDotnet.Naming.TerraformNamingConvention.Validate(TerraformDotnet.Module.TerraformModule! module) -> System.Collections.Generic.IReadOnlyList<TerraformDotnet.Naming.NamingViolation!>!
+TerraformDotnet.Naming.TerraformNamingConvention.Variable.get -> TerraformDotnet.Naming.NameFormat!
+TerraformDotnet.Naming.TerraformNamingConvention.Variable.init -> void
