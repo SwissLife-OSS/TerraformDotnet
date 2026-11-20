@@ -9,8 +9,13 @@ namespace TerraformDotnet.Hcl.Nodes;
 /// </summary>
 public abstract class HclExpression : HclNode
 {
+    /// <summary>
+    /// Attribute name used to parse and write a standalone expression through the file parser and emitter.
+    /// </summary>
+    private const string ExpressionAttributeName = "__expression__";
+
     /// <summary>Attribute prefix used to parse a standalone expression through the file parser.</summary>
-    private const string ExpressionPrefix = "__expression__ = ";
+    private const string ExpressionPrefix = ExpressionAttributeName + " = ";
 
     /// <inheritdoc />
     public override HclNodeType NodeType => HclNodeType.Expression;
@@ -43,6 +48,28 @@ public abstract class HclExpression : HclNode
         }
 
         return file.Body.Attributes[0].Value;
+    }
+
+    /// <summary>
+    /// Writes this expression as HCL text, laid out as it would be as the value of a top-level attribute.
+    /// </summary>
+    /// <returns>The expression text without a trailing line break.</returns>
+    /// <remarks>Multi-line values are indented as if the expression started at column 0.</remarks>
+    /// <example>
+    /// <code>
+    /// string hcl = HclLiteralExpression.String("say \"hi\"").ToHcl(); // "\"say \\\"hi\\\"\""
+    /// </code>
+    /// </example>
+    public string ToHcl()
+    {
+        var file = new HclFile
+        {
+            Body = { Attributes = { new HclAttribute { Name = ExpressionAttributeName, Value = this } } },
+        };
+
+        string hcl = HclFileEmitter.EmitToString(file);
+
+        return hcl[ExpressionPrefix.Length..].TrimEnd('\r', '\n');
     }
 
     /// <summary>

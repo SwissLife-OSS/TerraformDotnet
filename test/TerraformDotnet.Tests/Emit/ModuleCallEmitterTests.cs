@@ -280,9 +280,9 @@ public class ModuleCallEmitterTests
         };
         var result = emitter.EmitVariableDeclarations(options);
 
-        // Required variables have type and description but no default
+        // Required variables have type and description but no default; terraform fmt aligns them
         Assert.Contains("variable \"project\" {", result);
-        Assert.Contains("type = string", result);
+        Assert.Contains("type        = string", result);
         Assert.Contains("description = \"Project name.\"", result);
 
         // tier has a default in the module
@@ -693,9 +693,9 @@ public class ModuleCallEmitterTests
         var result = emitter.EmitVariableDeclarations(options);
 
         Assert.Contains("variable \"project_name\"", result);
-        Assert.Contains("type = string", result);
+        Assert.Contains("type        = string", result);
         Assert.Contains("description = \"The name of the project.\"", result);
-        Assert.Contains("type = map(string)", result);
+        Assert.Contains("type        = map(string)", result);
     }
 
     // ── EmitInputValues — Sentinel Variables ────────────────────

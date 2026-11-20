@@ -51,4 +51,19 @@ public sealed class HclFile : HclNode
     {
         return HclFileParser.Parse(hclData);
     }
+
+    /// <summary>
+    /// Writes this file as HCL text laid out like <c>terraform fmt</c>, comments included.
+    /// </summary>
+    /// <returns>The HCL text; empty for an empty file.</returns>
+    /// <example>
+    /// <code>
+    /// var file = new HclFile
+    /// {
+    ///     Body = { Attributes = { new HclAttribute { Name = "name", Value = HclLiteralExpression.String("app") } } },
+    /// };
+    /// string hcl = file.ToHcl(); // "name = \"app\"\n"
+    /// </code>
+    /// </example>
+    public string ToHcl() => HclFileEmitter.EmitToString(this);
 }

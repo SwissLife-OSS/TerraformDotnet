@@ -173,6 +173,7 @@ writer.Flush();
 | **Emit** | `TerraformDotnet.Emit` | Module call builder and code emitter |
 | **Functions** | `TerraformDotnet.Evaluation` | Terraform function library and type conversion |
 | **Validation** | `TerraformDotnet.Validation` | Variable constraint extraction and validation evaluation |
+| **Naming** | `TerraformDotnet.Naming` | Naming conventions: generate and check block names, read the tflint rule |
 
 See [docs/hcl.md](docs/hcl.md) and [docs/terraformdotnet.md](docs/terraformdotnet.md) for detailed documentation.
 

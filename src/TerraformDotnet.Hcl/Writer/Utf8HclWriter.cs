@@ -30,6 +30,9 @@ public sealed class Utf8HclWriter : IDisposable
     /// <summary>Gets the current block nesting depth.</summary>
     public int CurrentDepth => _currentDepth;
 
+    /// <summary>Gets the options the writer was created with.</summary>
+    internal HclWriterOptions Options => _options;
+
     /// <summary>
     /// Initializes a new writer that writes to an <see cref="IBufferWriter{T}"/>.
     /// </summary>
@@ -232,8 +235,10 @@ public sealed class Utf8HclWriter : IDisposable
     /// Writes a line comment: <c>// text</c>.
     /// </summary>
     /// <param name="text">The comment text (without the <c>//</c> prefix).</param>
+    /// <exception cref="ArgumentException"><paramref name="text"/> contains a line break.</exception>
     public void WriteLineComment(string text)
     {
+        ThrowIfLineBreak(text);
         WriteRaw("//"u8);
         WriteRaw(Encoding.UTF8.GetBytes(text));
     }
@@ -242,8 +247,10 @@ public sealed class Utf8HclWriter : IDisposable
     /// Writes a hash comment: <c># text</c>.
     /// </summary>
     /// <param name="text">The comment text (without the <c>#</c> prefix).</param>
+    /// <exception cref="ArgumentException"><paramref name="text"/> contains a line break.</exception>
     public void WriteHashComment(string text)
     {
+        ThrowIfLineBreak(text);
         WriteRaw((byte)'#');
         WriteRaw(Encoding.UTF8.GetBytes(text));
     }
@@ -252,11 +259,30 @@ public sealed class Utf8HclWriter : IDisposable
     /// Writes a block comment: <c>/* text */</c>.
     /// </summary>
     /// <param name="text">The comment text (without the <c>/* */</c> delimiters).</param>
+    /// <exception cref="ArgumentException"><paramref name="text"/> contains <c>*/</c>.</exception>
     public void WriteBlockComment(string text)
     {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.Contains("*/", StringComparison.Ordinal))
+        {
+            throw new ArgumentException("A block comment cannot contain '*/'.", nameof(text));
+        }
+
         WriteRaw("/*"u8);
         WriteRaw(Encoding.UTF8.GetBytes(text));
         WriteRaw("*/"u8);
+    }
+
+    // A line break would end the comment and turn the rest of the text into HCL.
+    private static void ThrowIfLineBreak(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.AsSpan().IndexOfAny('\r', '\n') >= 0)
+        {
+            throw new ArgumentException("A line comment cannot contain a line break.", nameof(text));
+        }
     }
 
     // ── Raw output ──────────────────────────────────────────────
@@ -391,33 +417,104 @@ public sealed class Utf8HclWriter : IDisposable
         _bytesWritten += data.Length;
     }
 
+    /// <summary>
+    /// Writes the content of a quoted string. The value keeps template sequences as written, so the
+    /// code inside <c>${...}</c> and <c>%{...}</c> is written as-is and only the quoted strings nested
+    /// in it are escaped. <c>$${</c> and <c>%%{</c> stay literal.
+    /// </summary>
     private void WriteEscapedString(string value)
     {
-        foreach (char c in value)
+        // Each entry is the open-brace count of an interpolation; -1 marks a string nested in one.
+        var frames = new Stack<int>();
+
+        for (int i = 0; i < value.Length; i++)
         {
+            char c = value[i];
+
+            if (char.IsHighSurrogate(c) && i + 1 < value.Length && char.IsLowSurrogate(value[i + 1]))
+            {
+                WriteRaw(Encoding.UTF8.GetBytes(value.Substring(i, 2)));
+                i++;
+
+                continue;
+            }
+
+            bool inCode = frames.Count > 0 && frames.Peek() >= 0;
+
+            if (!inCode && c is '$' or '%' && i + 1 < value.Length && value[i + 1] == '{'
+                && (i == 0 || value[i - 1] != c))
+            {
+                WriteEscapedChar(c);
+                WriteEscapedChar('{');
+                frames.Push(0);
+                i++;
+
+                continue;
+            }
+
+            if (!inCode)
+            {
+                if (c == '"' && frames.Count > 0)
+                {
+                    frames.Pop();
+                    WriteEscapedChar(c, escapeQuote: false);
+                }
+                else
+                {
+                    WriteEscapedChar(c);
+                }
+
+                continue;
+            }
+
             switch (c)
             {
-                case '\\': WriteRaw("\\\\"u8); break;
-                case '"': WriteRaw("\\\""u8); break;
-                case '\n': WriteRaw("\\n"u8); break;
-                case '\r': WriteRaw("\\r"u8); break;
-                case '\t': WriteRaw("\\t"u8); break;
-                case '$': // interpolation markers are written as-is
-                    WriteRaw(Encoding.UTF8.GetBytes(c.ToString()));
+                case '"':
+                    frames.Push(-1);
                     break;
-                default:
-                    if (c < 0x20)
-                    {
-                        // Control characters as Unicode escapes
-                        WriteRaw(Encoding.UTF8.GetBytes($"\\u{(int)c:X4}"));
-                    }
-                    else
-                    {
-                        WriteRaw(Encoding.UTF8.GetBytes(c.ToString()));
-                    }
-
+                case '{':
+                    frames.Push(frames.Pop() + 1);
+                    break;
+                case '}' when frames.Peek() == 0:
+                    frames.Pop();
+                    break;
+                case '}':
+                    frames.Push(frames.Pop() - 1);
                     break;
             }
+
+            if (c < 0x20)
+            {
+                WriteEscapedChar(c);
+            }
+            else
+            {
+                WriteRaw(Encoding.UTF8.GetBytes(c.ToString()));
+            }
+        }
+    }
+
+    private void WriteEscapedChar(char c, bool escapeQuote = true)
+    {
+        switch (c)
+        {
+            case '\\': WriteRaw("\\\\"u8); break;
+            case '"' when escapeQuote: WriteRaw("\\\""u8); break;
+            case '\n': WriteRaw("\\n"u8); break;
+            case '\r': WriteRaw("\\r"u8); break;
+            case '\t': WriteRaw("\\t"u8); break;
+            default:
+                if (c < 0x20)
+                {
+                    // Control characters as Unicode escapes
+                    WriteRaw(Encoding.UTF8.GetBytes($"\\u{(int)c:X4}"));
+                }
+                else
+                {
+                    WriteRaw(Encoding.UTF8.GetBytes(c.ToString()));
+                }
+
+                break;
         }
     }
 }

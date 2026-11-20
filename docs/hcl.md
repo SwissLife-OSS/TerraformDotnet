@@ -21,6 +21,8 @@ Complete guide for the HCL parser, writer, and evaluation engine.
   - [Collections](#collections)
   - [Comments](#writing-comments)
   - [AST-driven emission](#ast-driven-emission)
+  - [Building a tree in code](#building-a-tree-in-code)
+  - [Formatting text](#formatting-text)
 - [Round-Trip Editing](#round-trip-editing)
 - [Expression Evaluation](#expression-evaluation)
   - [Variable binding](#variable-binding)
@@ -199,6 +201,30 @@ foreach (var comment in file.DanglingComments)
 }
 ```
 
+The same model applies inside expressions:
+
+```hcl
+tags = {
+  # leading comment of the "env" element
+  env  = "prod" # trailing comment of the "env" element
+  team = "platform"
+  # dangling comment of the object
+} # trailing comment of the "tags" attribute
+
+zones = [
+  "1", # trailing comment of the element
+  "2"
+  # dangling comment of the tuple
+]
+```
+
+- `HclObjectElement.LeadingComments` / `TrailingComment` hold comments around an object element.
+- Tuple elements and call arguments are expressions, so they use `LeadingComments` / `TrailingComment` of the expression.
+- `DanglingComments` on `HclObjectExpression`, `HclTupleExpression`, `HclFunctionCallExpression` and `HclBody` hold comments before the closing bracket.
+- A block's `TrailingComment` is the comment after its closing `}`.
+
+Limits: a comment on an opening line (`{ # note`) becomes a leading comment of the first element, comments inside operators, conditionals, `for` expressions, index brackets and templates move to the next attribute, and blank lines around comments are not kept.
+
 ---
 
 ## Low-Level Reader
@@ -282,7 +308,7 @@ resource "aws_s3_bucket" "assets" {
 
 ### Attribute alignment
 
-Attributes in the same block are aligned to the longest name, matching `terraform fmt`. You can compute padding explicitly:
+Like `terraform fmt`, `=` signs are aligned only across runs of adjacent single-line attributes. An attribute whose value spans several lines (an object, a multi-line tuple or call, a `for` over an object body) gets no padding and ends the run; blank lines, comments and blocks end it too. Heredocs stay in the run. You can compute padding for a plain list of names explicitly:
 
 ```csharp
 var names = new List<string> { "source", "version", "department", "environment" };
@@ -331,9 +357,15 @@ writer.WriteAttributeEnd();
 ### Writing comments
 
 ```csharp
-writer.WriteLineComment(" This is a comment");
+writer.WriteHashComment(" This is a comment");
 // Output: # This is a comment
+
+writer.WriteLineComment(" This is a comment");
+// Output: // This is a comment
 ```
+
+`WriteHashComment` and `WriteLineComment` throw `ArgumentException` when the text contains a line break, and
+`WriteBlockComment` throws when it contains `*/`: either would end the comment and turn the rest of the text into HCL.
 
 ### AST-driven emission
 
@@ -354,7 +386,81 @@ writer.Flush();
 string output = Encoding.UTF8.GetString(buffer.WrittenSpan);
 ```
 
-The `HclFileEmitter` preserves comments by default and produces output identical to `terraform fmt`.
+The `HclFileEmitter` preserves comments by default and produces output identical to `terraform fmt`. A tuple or function call with a multi-line item is written one item per line, and an object-style `for` is written as `{ for ... }`; both are what `terraform fmt` leaves untouched. A call with exactly one multi-line argument keeps it inline, as in `merge(var.a, {` … `})`, and a tuple, call or object that holds a comment is written on several lines.
+
+Parentheses are not stored in the AST: the emitter writes them where the tree needs them, so `(a + b) * 2` stays as is and `a + (b * 2)` becomes `a + b * 2`.
+
+String literal values keep template sequences as written. `"${join(", ", var.list)}"` round-trips unchanged: only the text outside `${...}`/`%{...}` and strings nested inside them are escaped, and `$${`/`%%{` stay literal.
+
+`HclFile.ToHcl()` and `HclExpression.ToHcl()` do the same in one call. An expression is laid out as it would be as an
+attribute value, without a trailing line break:
+
+```csharp
+string text = file.ToHcl();
+string value = HclExpression.Parse("merge(var.tags, { env = \"prod\" })").ToHcl();
+```
+
+### Building a tree in code
+
+Factories create nodes with the same values the parser produces:
+
+```csharp
+var tags = new HclObjectExpression();
+tags.Add("env", HclLiteralExpression.String("prod"));        // env = "prod"
+tags.Add("cost.center", HclLiteralExpression.Number(42));    // "cost.center" = 42
+tags.Add("enabled", HclLiteralExpression.Bool(true));
+tags.Add("owner", HclLiteralExpression.Null());
+
+var module = new HclBlock { Type = "module", Labels = { "kv" } };
+module.Body.Attributes.Add(new HclAttribute
+{
+    Name = "source",
+    Value = HclLiteralExpression.String("./modules/kv"),
+    TrailingComment = HclComment.Hash("pinned by the platform team"),
+});
+module.Body.Attributes.Add(new HclAttribute { Name = "tags", Value = tags });
+
+string hcl = new HclFile { Body = { Blocks = { module } } }.ToHcl();
+```
+
+- `HclLiteralExpression.String` keeps template sequences as written, like a parsed literal: `${...}` stays an
+  interpolation and `$${` stays literal text.
+- `HclLiteralExpression.Number` writes numbers with the invariant culture and without an exponent (`1e20` becomes
+  `100000000000000000000`). It throws for `NaN` and infinities.
+- `HclObjectExpression.Add(string, HclExpression)` writes the key bare when it is an identifier, and quoted otherwise
+  (`"a.b"`, `"1x"`, non-ASCII keys, and the keywords `for`, `true`, `false` and `null`).
+- `HclComment.Hash`, `HclComment.Line` and `HclComment.Block` put one space after the comment marker. The line comment
+  factories throw for text with a line break, and `Block` throws for text containing `*/`.
+- `HclExpression.Parse` builds the node for any expression written as text, such as `var.tags` or `upper(local.x)`.
+
+### Formatting text
+
+`HclFormatter` applies the layout rules of `terraform fmt` to HCL text: indentation, `=` alignment and trailing comment alignment. Line breaks, the spacing inside a line, and heredoc bodies are kept as written.
+
+```csharp
+using TerraformDotnet.Hcl.Writer;
+
+string formatted = HclFormatter.Format("""
+    locals {
+    a = 1
+    long_name = 2 # note
+    }
+    """);
+
+// locals {
+//   a         = 1
+//   long_name = 2 # note
+// }
+
+byte[] utf8 = HclFormatter.Format("a = 1\n"u8);
+```
+
+`Format` throws `HclSyntaxException` when the text cannot be tokenized or its brackets do not balance. `TryFormat`
+returns `false` instead:
+
+```csharp
+string text = HclFormatter.TryFormat(hcl, out string? formatted) ? formatted : hcl;
+```
 
 ---
 
@@ -376,13 +482,10 @@ HclFile file = HclFile.Load(hcl);
 // Modify — change the default value
 var variable = file.Body.Blocks[0];
 var defaultAttr = variable.Body.Attributes.First(a => a.Name == "default");
-defaultAttr.Value = new HclLiteralExpression("eu-west-1");
+defaultAttr.Value = HclLiteralExpression.String("eu-west-1");
 
 // Emit
-var buffer = new ArrayBufferWriter<byte>();
-using var writer = new Utf8HclWriter(buffer);
-new HclFileEmitter(writer).Emit(file);
-writer.Flush();
+string output = file.ToHcl();
 // variable "region" {
 //   type    = string
 //   default = "eu-west-1"

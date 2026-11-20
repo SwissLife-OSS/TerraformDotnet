@@ -29,6 +29,15 @@ public abstract class HclNode
     public bool HasLeadingBlankLine { get; set; }
 
     /// <summary>
+    /// Copies the leading and trailing comments of this node to <paramref name="clone"/>.
+    /// </summary>
+    internal void CopyCommentsTo(HclNode clone)
+    {
+        clone.LeadingComments.AddRange(LeadingComments);
+        clone.TrailingComment = TrailingComment;
+    }
+
+    /// <summary>
     /// Accepts a visitor for tree traversal.
     /// </summary>
     /// <param name="visitor">The visitor to accept.</param>

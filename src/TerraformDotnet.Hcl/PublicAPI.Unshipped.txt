@@ -1,1 +1,25 @@
 #nullable enable
+TerraformDotnet.Hcl.Writer.HclFormatter
+static TerraformDotnet.Hcl.Writer.HclFormatter.Format(string! hcl) -> string!
+static TerraformDotnet.Hcl.Writer.HclFormatter.Format(System.ReadOnlySpan<byte> utf8Hcl) -> byte[]!
+TerraformDotnet.Hcl.Nodes.HclBody.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclFunctionCallExpression.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclObjectElement.LeadingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclObjectElement.TrailingComment.get -> TerraformDotnet.Hcl.Nodes.HclComment?
+TerraformDotnet.Hcl.Nodes.HclObjectElement.TrailingComment.set -> void
+TerraformDotnet.Hcl.Nodes.HclObjectExpression.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclTupleExpression.DanglingComments.get -> System.Collections.Generic.List<TerraformDotnet.Hcl.Nodes.HclComment!>!
+TerraformDotnet.Hcl.Nodes.HclExpression.ToHcl() -> string!
+TerraformDotnet.Hcl.Nodes.HclFile.ToHcl() -> string!
+TerraformDotnet.Hcl.Nodes.HclObjectExpression.Add(string! key, TerraformDotnet.Hcl.Nodes.HclExpression! value) -> TerraformDotnet.Hcl.Nodes.HclObjectElement!
+static TerraformDotnet.Hcl.Nodes.HclComment.Block(string! text) -> TerraformDotnet.Hcl.Nodes.HclComment!
+static TerraformDotnet.Hcl.Nodes.HclComment.Hash(string! text) -> TerraformDotnet.Hcl.Nodes.HclComment!
+static TerraformDotnet.Hcl.Nodes.HclComment.Line(string! text) -> TerraformDotnet.Hcl.Nodes.HclComment!
+static TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Bool(bool value) -> TerraformDotnet.Hcl.Nodes.HclLiteralExpression!
+static TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Null() -> TerraformDotnet.Hcl.Nodes.HclLiteralExpression!
+static TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Number(decimal value) -> TerraformDotnet.Hcl.Nodes.HclLiteralExpression!
+static TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Number(double value) -> TerraformDotnet.Hcl.Nodes.HclLiteralExpression!
+static TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Number(int value) -> TerraformDotnet.Hcl.Nodes.HclLiteralExpression!
+static TerraformDotnet.Hcl.Nodes.HclLiteralExpression.Number(long value) -> TerraformDotnet.Hcl.Nodes.HclLiteralExpression!
+static TerraformDotnet.Hcl.Nodes.HclLiteralExpression.String(string! value) -> TerraformDotnet.Hcl.Nodes.HclLiteralExpression!
+static TerraformDotnet.Hcl.Writer.HclFormatter.TryFormat(string? hcl, out string? formatted) -> bool
